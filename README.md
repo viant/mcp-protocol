@@ -150,7 +150,7 @@ func NewMyImplementer() server.NewImplementer {
 ```
 
 ## Example: Comprehensive Custom Implementer
-Use the [example/custom](github.com/viant/mcp/example/custom) package for a more advanced implementer with polling, notifications, and resource watching:
+Use the [example/custom](https://github.com/viant/mcp/example/custom) package for a more advanced implementer with polling, notifications, and resource watching:
 ```go
 package main
 
