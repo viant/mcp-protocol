@@ -89,9 +89,9 @@ func Usage_Example() {
 }
 ```
 
-### Creating Custom Implementers
+### Creating Custom Implementer
 
-You can create custom implementers to extend the default behavior:
+You can create custom implementer to extend the default behavior:
 
 ```go
 package myimpl
@@ -148,6 +148,44 @@ func NewMyImplementer() server.NewImplementer {
 }
 
 ```
+
+## Example: Comprehensive Custom Implementer
+Use the [example/custom](github.com/viant/mcp/example/custom) package for a more advanced implementer with polling, notifications, and resource watching:
+```go
+package main
+
+import (
+    "context"
+    "embed"
+    "log"
+
+    "github.com/viant/afs/storage"
+    "github.com/viant/mcp/example/custom"
+    "github.com/viant/mcp/server"
+    "github.com/viant/mcp-protocol/schema"
+)
+
+//go:embed data/*
+var embedFS embed.FS
+
+func main() {
+    config := &custom.Config{
+        BaseURL: "embed://data",
+        Options: []storage.Option{embedFS},
+    }
+    newImplementer := custom.New(config)
+    srv, err := server.New(
+        server.WithNewImplementer(newImplementer),
+        server.WithImplementation(schema.Implementation{"custom", "1.0"}),
+        server.WithCapabilities(schema.ServerCapabilities{Resources: &schema.ServerCapabilitiesResources{}}),
+    )
+    if err != nil {
+        log.Fatalf("Failed to create server: %v", err)
+    }
+    log.Fatal(srv.HTTP(context.Background(), ":4981").ListenAndServe())
+}
+```
+
 
 ## Key Components
 
