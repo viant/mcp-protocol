@@ -2,7 +2,7 @@
 
 MCP-Protocol is a Go implementation of the Model Context Protocol — a standardized way for applications to communicate with AI models. It allows developers to seamlessly bridge applications and AI models using a lightweight, JSON-RPC–based protocol.
 
-**Note:** This repository (`github.com/viant/mcp-protocol`) provides the shared protocol definitions and schemas for MCP and is used by the `github.com/viant/mcp` framework.
+This repository contains the shared protocol definitions and schemas for MCP. It is used by github.com/viant/mcp, which provides the actual implementation of the MCP server and client framework.
 
 [Official Model Context Protocol Specification](https://modelcontextprotocol.io/introduction)
 
@@ -97,46 +97,56 @@ You can create custom implementers to extend the default behavior:
 package myimpl
 
 import (
-    "context"
-    "github.com/viant/jsonrpc"
-    "github.com/viant/jsonrpc/transport"
-    "github.com/viant/mcp-protocol/client"
-    "github.com/viant/mcp-protocol/logger"
-    "github.com/viant/mcp-protocol/schema"
-    "github.com/viant/mcp-protocol/server"
+  "context"
+  "github.com/viant/jsonrpc"
+  "github.com/viant/jsonrpc/transport"
+  "github.com/viant/mcp-protocol/client"
+  "github.com/viant/mcp-protocol/logger"
+  "github.com/viant/mcp-protocol/schema"
+  "github.com/viant/mcp-protocol/server"
 )
 
 // MyImplementer is a sample MCP implementer embedding the default Base.
 type MyImplementer struct {
-    *server.DefaultImplementer
+  *server.DefaultImplementer
 }
 
 // ListResources implements the resources/list method.
 func (i *MyImplementer) ListResources(
-    ctx context.Context,
-    req *schema.ListResourcesRequest,
+        ctx context.Context,
+        req *schema.ListResourcesRequest,
 ) (*schema.ListResourcesResult, *jsonrpc.Error) {
-    // Custom implementation
-    return &schema.ListResourcesResult{}, nil
+  // Custom implementation
+  return &schema.ListResourcesResult{}, nil
 }
 
 // Implements indicates which methods this implementer supports.
 func (i *MyImplementer) Implements(method string) bool {
-    return method == schema.MethodResourcesList
+  switch method {
+  case schema.MethodResourcesList, schema.MethodResourcesRead:
+    return true
+  }
+  return i.DefaultImplementer.Implements(method)
+}
+
+func (i *MyImplementer) ReadResource(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
+  // Custom implementation
+  return &schema.ReadResourceResult{}, nil
 }
 
 // NewMyImplementer returns a factory for MyImplementer.
 func NewMyImplementer() server.NewImplementer {
-    return func(
-        ctx context.Context,
-        notifier transport.Notifier,
-        log logger.Logger,
-        client client.Operations,
-    ) server.Implementer {
-        base := server.NewDefaultImplementer(notifier, log, client)
-        return &MyImplementer{DefaultImplementer: base}
-    }
+  return func(
+          ctx context.Context,
+          notifier transport.Notifier,
+          log logger.Logger,
+          aClient client.Operations,
+  ) server.Implementer {
+    base := server.NewDefaultImplementer(notifier, log, aClient)
+    return &MyImplementer{DefaultImplementer: base}
+  }
 }
+
 ```
 
 ## Key Components
