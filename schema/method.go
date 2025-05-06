@@ -3,7 +3,8 @@ package schema
 // JSON-RPC method names for MCP protocol
 const (
 	MethodInitialize                  = "initialize"
-	MethodPing                        = "ping"
+	MethodPing                        = "notifications/ping"
+	MethodPong                        = "notifications/pong"
 	MethodResourcesList               = "resources/list"
 	MethodResourcesTemplatesList      = "resources/templates/list"
 	MethodResourcesRead               = "resources/read"
@@ -15,10 +16,10 @@ const (
 	MethodToolsCall                   = "tools/call"
 	MethodComplete                    = "complete"
 	MethodLoggingSetLevel             = "logging/setLevel"
-	MethodNotificationInitialized     = "notification/initialized"
-	MethodNotificationMessage         = "notification/message"
-	MethodNotificationCancel          = "notification/cancel"
+	MethodNotificationInitialized     = "notifications/initialized"
 	MethodNotificationResourceUpdated = "notifications/resources/updated"
+	MethodNotificationMessage         = "notifications/message"
+	MethodNotificationCancel          = "cancel"
 	MethodRootsList                   = "roots/list"
 	MethodSamplingCreateMessage       = "sampling/createMessage"
 )
