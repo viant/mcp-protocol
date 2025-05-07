@@ -1,8 +1,6 @@
 package authorization
 
-import (
-	"github.com/viant/mcp-protocol/oauth2/meta"
-)
+import "github.com/viant/mcp-protocol/oauth2/meta"
 
 // Token carries authentication credentials.
 type Token struct {
@@ -19,7 +17,7 @@ type WithMeta struct {
 
 // Authorization defines per-resource aI do uthorization requirements.
 type Authorization struct {
-	ProtectedResourceMetadata *meta.ProtectedResourceMetadata `json:"protectedResourceMetadata"`
 	RequiredScopes            []string                        `json:"requiredScopes"`
 	UseIdToken                bool                            `json:"useIdToken,omitempty"`
+	ProtectedResourceMetadata *meta.ProtectedResourceMetadata `json:"protectedResourceMetadata"`
 }
