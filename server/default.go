@@ -131,11 +131,13 @@ func NewDefaultImplementer(notifier transport.Notifier, logger logger.Logger, cl
 }
 
 func WithDefaultImplementer(ctx context.Context, options ...Option) NewImplementer {
-	return func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) Implementer {
+	return func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Implementer, error) {
 		implementer := NewDefaultImplementer(notifier, logger, client)
 		for _, option := range options {
-			option(implementer)
+			if err := option(implementer); err != nil {
+				return nil, err
+			}
 		}
-		return implementer
+		return implementer, nil
 	}
 }

@@ -19,4 +19,4 @@ type Implementer interface {
 }
 
 // NewImplementer creates new implementer
-type NewImplementer func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) Implementer
+type NewImplementer func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Implementer, error)
