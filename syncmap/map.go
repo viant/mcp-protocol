@@ -46,6 +46,11 @@ func (m *Map[K, V]) Values() []V {
 	}
 	return values
 }
+func (m *Map[K, V]) Size() int {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+	return len(m.m)
+}
 
 func NewMap[K comparable, V any]() *Map[K, V] {
 	return &Map[K, V]{m: make(map[K]V)}

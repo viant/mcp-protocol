@@ -29,6 +29,12 @@ type DefaultImplementer struct {
 // Initialize stores the initialization parameters.
 func (d *DefaultImplementer) Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult) {
 	d.ClientInitialize = init
+	if d.ToolRegistry.Size() > 0 {
+		result.Capabilities.Tools = &schema.ServerCapabilitiesTools{}
+	}
+	if d.ResourceRegistry.Size() > 0 {
+		result.Capabilities.Resources = &schema.ServerCapabilitiesResources{}
+	}
 }
 
 // ListResources returns method-not-found by default.
