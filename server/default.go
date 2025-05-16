@@ -14,26 +14,34 @@ import (
 // DefaultImplementer provides default implementations for server-side methods.
 // You can embed this in your own Implementer and register tools/resources via its helper methods.
 type DefaultImplementer struct {
-	Notifier         transport.Notifier
-	Logger           logger.Logger
-	Client           client.Operations
-	ClientInitialize *schema.InitializeRequestParams
-	Subscription     *syncmap.Map[string, bool]
+	Notifier           transport.Notifier
+	Logger             logger.Logger
+	Client             client.Operations
+	ClientInitialize   *schema.InitializeRequestParams
+	Subscription       *syncmap.Map[string, bool]
+	ServerCapabilities *schema.ServerCapabilities
 	// ToolRegistry holds per-instance registered tools and handlers.
 	ToolRegistry             *syncmap.Map[string, *ToolEntry]
 	ResourceRegistry         *syncmap.Map[string, *ResourceEntry]
 	ResourceTemplateRegistry *syncmap.Map[string, *ResourceTemplateEntry]
+	Prompts                  *syncmap.Map[string, *PromptEntry]
 	Methods                  *syncmap.Map[string, bool]
 }
 
 // Initialize stores the initialization parameters.
 func (d *DefaultImplementer) Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult) {
 	d.ClientInitialize = init
+	if d.ServerCapabilities != nil {
+		result.Capabilities = *d.ServerCapabilities
+	}
 	if d.ToolRegistry.Size() > 0 {
 		result.Capabilities.Tools = &schema.ServerCapabilitiesTools{}
 	}
 	if d.ResourceRegistry.Size() > 0 {
 		result.Capabilities.Resources = &schema.ServerCapabilitiesResources{}
+	}
+	if d.Prompts.Size() > 0 {
+		result.Capabilities.Prompts = &schema.ServerCapabilitiesPrompts{}
 	}
 }
 
@@ -96,16 +104,6 @@ func (d *DefaultImplementer) CallTool(ctx context.Context, request *schema.CallT
 	return handler(ctx, request)
 }
 
-// ListPrompts returns method-not-found by default.
-func (d *DefaultImplementer) ListPrompts(ctx context.Context, request *schema.ListPromptsRequest) (*schema.ListPromptsResult, *jsonrpc.Error) {
-	return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("method %v not found", request.Method), nil)
-}
-
-// GetPrompt returns method-not-found by default.
-func (d *DefaultImplementer) GetPrompt(ctx context.Context, request *schema.GetPromptRequest) (*schema.GetPromptResult, *jsonrpc.Error) {
-	return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("method %v not found", request.Method), nil)
-}
-
 // Complete returns method-not-found by default.
 func (d *DefaultImplementer) Complete(ctx context.Context, request *schema.CompleteRequest) (*schema.CompleteResult, *jsonrpc.Error) {
 	return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("method %v not found", request.Method), nil)
@@ -132,6 +130,7 @@ func NewDefaultImplementer(notifier transport.Notifier, logger logger.Logger, cl
 		ToolRegistry:             syncmap.NewMap[string, *ToolEntry](),
 		ResourceRegistry:         syncmap.NewMap[string, *ResourceEntry](),
 		ResourceTemplateRegistry: syncmap.NewMap[string, *ResourceTemplateEntry](),
+		Prompts:                  syncmap.NewMap[string, *PromptEntry](),
 		Methods:                  syncmap.NewMap[string, bool](),
 	}
 }

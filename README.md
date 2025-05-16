@@ -79,7 +79,6 @@ func Usage_Example() {
   srv, err := server.New(
     server.WithNewImplementer(newImplementer),
     server.WithImplementation(schema.Implementation{"default", "1.0"}),
-    server.WithCapabilities(schema.ServerCapabilities{Resources: &schema.ServerCapabilitiesResources{}}),
   )
   if err != nil {
     log.Fatalf("Failed to create server: %v", err)
@@ -176,8 +175,7 @@ func main() {
     newImplementer := custom.New(config)
     srv, err := server.New(
         server.WithNewImplementer(newImplementer),
-        server.WithImplementation(schema.Implementation{"custom", "1.0"}),
-        server.WithCapabilities(schema.ServerCapabilities{Resources: &schema.ServerCapabilitiesResources{}}),
+        server.WithImplementation(schema.Implementation{"custom", "1.0"})
     )
     if err != nil {
         log.Fatalf("Failed to create server: %v", err)
