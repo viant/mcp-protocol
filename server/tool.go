@@ -18,9 +18,12 @@ type ToolEntry struct {
 	Metadata schema.Tool
 }
 
+// Tools is a collection of ToolEntry
+type Tools []*ToolEntry
+
 // RegisterToolWithSchema registers a tool with name, description, input schema, and handler on this Base.
 // The tool will be advertised to clients with the provided metadata.
-func (d *DefaultImplementer) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, handler ToolHandlerFunc) {
+func (d *Registry) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, handler ToolHandlerFunc) {
 	d.Methods.Put(schema.MethodToolsList, true)
 	d.Methods.Put(schema.MethodToolsCall, true)
 	d.ToolRegistry.Put(name, &ToolEntry{
@@ -34,7 +37,7 @@ func (d *DefaultImplementer) RegisterToolWithSchema(name string, description str
 }
 
 // ListRegisteredTools returns metadata for all registered tools on this Base.
-func (d *DefaultImplementer) ListRegisteredTools() []schema.Tool {
+func (d *Registry) ListRegisteredTools() []schema.Tool {
 	var tools []schema.Tool
 	d.ToolRegistry.Range(func(_ string, entry *ToolEntry) bool {
 		tools = append(tools, entry.Metadata)
@@ -44,7 +47,7 @@ func (d *DefaultImplementer) ListRegisteredTools() []schema.Tool {
 }
 
 // getToolHandler retrieves the handler for a registered tool on this Base.
-func (d *DefaultImplementer) getToolHandler(name string) (ToolHandlerFunc, bool) {
+func (d *Registry) getToolHandler(name string) (ToolHandlerFunc, bool) {
 	entry, ok := d.ToolRegistry.Get(name)
 	if !ok {
 		return nil, false

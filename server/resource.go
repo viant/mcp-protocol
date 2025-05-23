@@ -15,14 +15,20 @@ type ResourceTemplateEntry struct {
 // ResourceHandlerFunc defines a function to handle a resource read.
 type ResourceHandlerFunc func(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error)
 
+// ResourceTemplates is a collection of ResourceTemplateEntry
+type ResourceTemplates []*ResourceTemplateEntry
+
 // ResourceEntry holds a handler with its metadata.
 type ResourceEntry struct {
 	Handler  ResourceHandlerFunc
 	Metadata schema.Resource
 }
 
+// Resources is a collection of ResourceEntry
+type Resources []*ResourceEntry
+
 // RegisterResource registers a resource with metadata and handler on this DefaultImplementer.
-func (d *DefaultImplementer) RegisterResource(resource schema.Resource, handler ResourceHandlerFunc) {
+func (d *Registry) RegisterResource(resource schema.Resource, handler ResourceHandlerFunc) {
 	d.Methods.Put(schema.MethodResourcesList, true)
 	d.Methods.Put(schema.MethodResourcesRead, true)
 	d.ResourceRegistry.Put(resource.Uri, &ResourceEntry{
@@ -32,7 +38,7 @@ func (d *DefaultImplementer) RegisterResource(resource schema.Resource, handler 
 }
 
 // RegisterResourceTemplate registers a resource template on this DefaultImplementer.
-func (d *DefaultImplementer) RegisterResourceTemplate(template schema.ResourceTemplate, handler ResourceHandlerFunc) {
+func (d *Registry) RegisterResourceTemplate(template schema.ResourceTemplate, handler ResourceHandlerFunc) {
 	d.Methods.Put(schema.MethodResourcesTemplatesList, true)
 	d.ResourceTemplateRegistry.Put(template.UriTemplate, &ResourceTemplateEntry{
 		Metadata: template,
@@ -41,7 +47,7 @@ func (d *DefaultImplementer) RegisterResourceTemplate(template schema.ResourceTe
 }
 
 // ListRegisteredResources returns metadata for all registered resources on this DefaultImplementer.
-func (d *DefaultImplementer) ListRegisteredResources() []schema.Resource {
+func (d *Registry) ListRegisteredResources() []schema.Resource {
 	var list []schema.Resource
 	d.ResourceRegistry.Range(func(_ string, entry *ResourceEntry) bool {
 		list = append(list, entry.Metadata)
@@ -51,7 +57,7 @@ func (d *DefaultImplementer) ListRegisteredResources() []schema.Resource {
 }
 
 // ListRegisteredResourceTemplates returns metadata for all registered resource templates on this DefaultImplementer.
-func (d *DefaultImplementer) ListRegisteredResourceTemplates() []schema.ResourceTemplate {
+func (d *Registry) ListRegisteredResourceTemplates() []schema.ResourceTemplate {
 	var list []schema.ResourceTemplate
 	d.ResourceTemplateRegistry.Range(func(_ string, entry *ResourceTemplateEntry) bool {
 		list = append(list, entry.Metadata)
@@ -61,7 +67,7 @@ func (d *DefaultImplementer) ListRegisteredResourceTemplates() []schema.Resource
 }
 
 // getResourceHandler retrieves the handler for a registered resource on this DefaultImplementer.
-func (d *DefaultImplementer) getResourceHandler(uri string) (ResourceHandlerFunc, bool) {
+func (d *Registry) getResourceHandler(uri string) (ResourceHandlerFunc, bool) {
 	templateEntry, ok := d.ResourceTemplateRegistry.Get(uri)
 	if ok {
 		return templateEntry.Handler, true

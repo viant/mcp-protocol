@@ -83,10 +83,13 @@ func structToProperties(t reflect.Type) (ToolInputSchemaProperties, []string) {
 		if !field.IsExported() {
 			continue
 		}
-
 		// Parse struct tags for json and format.
 		jsonTag := field.Tag.Get("json")
 		if jsonTag == "-" {
+			continue
+		}
+		isInternal := field.Tag.Get("internal")
+		if isInternal != "" {
 			continue
 		}
 		var fieldName string
@@ -113,6 +116,11 @@ func structToProperties(t reflect.Type) (ToolInputSchemaProperties, []string) {
 		}
 		// Set the property in overall schema.
 		properties[fieldName] = fieldSchema
+		tag := string(field.Tag)
+		isOptional := strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
+		if isOptional {
+			continue
+		}
 		if field.Type.Kind() != reflect.Ptr && !omitempty {
 			required = append(required, fieldName)
 		}

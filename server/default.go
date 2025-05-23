@@ -20,12 +20,7 @@ type DefaultImplementer struct {
 	ClientInitialize   *schema.InitializeRequestParams
 	Subscription       *syncmap.Map[string, bool]
 	ServerCapabilities *schema.ServerCapabilities
-	// ToolRegistry holds per-instance registered tools and handlers.
-	ToolRegistry             *syncmap.Map[string, *ToolEntry]
-	ResourceRegistry         *syncmap.Map[string, *ResourceEntry]
-	ResourceTemplateRegistry *syncmap.Map[string, *ResourceTemplateEntry]
-	Prompts                  *syncmap.Map[string, *PromptEntry]
-	Methods                  *syncmap.Map[string, bool]
+	*Registry
 }
 
 // Initialize stores the initialization parameters.
@@ -113,6 +108,33 @@ func (d *DefaultImplementer) Complete(ctx context.Context, request *schema.Compl
 func (d *DefaultImplementer) OnNotification(ctx context.Context, notification *jsonrpc.Notification) {
 }
 
+// ListPrompts lists all registered prompts on this DefaultImplementer.
+func (d *DefaultImplementer) ListPrompts(ctx context.Context, request *schema.ListPromptsRequest) (*schema.ListPromptsResult, *jsonrpc.Error) {
+	result := &schema.ListPromptsResult{}
+	for _, entry := range d.Prompts.Values() {
+		result.Prompts = append(result.Prompts, *entry.Prompt)
+	}
+	return result, nil
+}
+
+// GetPrompt returns the result of a prompt call.
+func (d *DefaultImplementer) GetPrompt(ctx context.Context, request *schema.GetPromptRequest) (*schema.GetPromptResult, *jsonrpc.Error) {
+	promptEntry, ok := d.Prompts.Get(request.Params.Name)
+	if !ok {
+		return nil, jsonrpc.NewMethodNotFound(
+			fmt.Sprintf("prompt %q not found", request.Params.Name), nil)
+	}
+	prompt := promptEntry.Prompt
+	for _, arg := range prompt.Arguments {
+		if arg.Required != nil && *arg.Required {
+			if _, ok := request.Params.Arguments[arg.Name]; !ok {
+				return nil, jsonrpc.NewInvalidRequest(fmt.Sprintf("missing required argument %q", arg.Name), nil)
+			}
+		}
+	}
+	return promptEntry.Handler(ctx, &request.Params)
+}
+
 // Implements returns true for supported methods.
 func (d *DefaultImplementer) Implements(method string) bool {
 	has, _ := d.Methods.Get(method)
@@ -123,15 +145,11 @@ func (d *DefaultImplementer) Implements(method string) bool {
 // You can then call RegisterResource, RegisterTool, etc., on it before running the server.
 func NewDefaultImplementer(notifier transport.Notifier, logger logger.Logger, client client.Operations) *DefaultImplementer {
 	return &DefaultImplementer{
-		Notifier:                 notifier,
-		Logger:                   logger,
-		Client:                   client,
-		Subscription:             syncmap.NewMap[string, bool](),
-		ToolRegistry:             syncmap.NewMap[string, *ToolEntry](),
-		ResourceRegistry:         syncmap.NewMap[string, *ResourceEntry](),
-		ResourceTemplateRegistry: syncmap.NewMap[string, *ResourceTemplateEntry](),
-		Prompts:                  syncmap.NewMap[string, *PromptEntry](),
-		Methods:                  syncmap.NewMap[string, bool](),
+		Notifier:     notifier,
+		Logger:       logger,
+		Client:       client,
+		Subscription: syncmap.NewMap[string, bool](),
+		Registry:     NewHandlerRegistry(),
 	}
 }
 
