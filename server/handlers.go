@@ -13,7 +13,7 @@ type Registry struct {
 }
 
 // NewHandlerRegistry creates a new Registry instance.
-func NewHandlerRegistry() *Registry {
+func NewRegistry() *Registry {
 	// constructor for Registry
 	return &Registry{
 		ToolRegistry:             syncmap.NewMap[string, *ToolEntry](),

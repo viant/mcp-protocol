@@ -149,7 +149,7 @@ func NewDefaultImplementer(notifier transport.Notifier, logger logger.Logger, cl
 		Logger:       logger,
 		Client:       client,
 		Subscription: syncmap.NewMap[string, bool](),
-		Registry:     NewHandlerRegistry(),
+		Registry:     NewRegistry(),
 	}
 }
 
