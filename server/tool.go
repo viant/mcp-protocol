@@ -24,9 +24,7 @@ type Tools []*ToolEntry
 // RegisterToolWithSchema registers a tool with name, description, input schema, and handler on this Base.
 // The tool will be advertised to clients with the provided metadata.
 func (d *Registry) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, handler ToolHandlerFunc) {
-	d.Methods.Put(schema.MethodToolsList, true)
-	d.Methods.Put(schema.MethodToolsCall, true)
-	d.ToolRegistry.Put(name, &ToolEntry{
+	d.RegisterTool(&ToolEntry{
 		Handler: handler,
 		Metadata: schema.Tool{
 			Name:        name,
@@ -34,6 +32,13 @@ func (d *Registry) RegisterToolWithSchema(name string, description string, input
 			InputSchema: inputSchema,
 		},
 	})
+}
+
+// RegisterTool registers a tool with name, description, input schema, and handler
+func (d *Registry) RegisterTool(entry *ToolEntry) {
+	d.Methods.Put(schema.MethodToolsList, true)
+	d.Methods.Put(schema.MethodToolsCall, true)
+	d.ToolRegistry.Put(entry.Metadata.Name, entry)
 }
 
 // ListRegisteredTools returns metadata for all registered tools on this Base.
@@ -57,7 +62,7 @@ func (d *Registry) getToolHandler(name string) (ToolHandlerFunc, bool) {
 
 // RegisterTool registers a tool on this Base by deriving its input schema from a struct type.
 // Handler receives a typed input value and returns a CallToolResult.
-func RegisterTool[I any](implementer *DefaultImplementer, name string, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
+func RegisterTool[I any](registry *Registry, name string, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
 	// Derive input schema from struct type I
 
 	var sample I
@@ -88,6 +93,6 @@ func RegisterTool[I any](implementer *DefaultImplementer, name string, descripti
 		return handler(ctx, input)
 	}
 	// Register with metadata and wrapped handler on this Base
-	implementer.RegisterToolWithSchema(name, description, inputSchema, wrapped)
+	registry.RegisterToolWithSchema(name, description, inputSchema, wrapped)
 	return nil
 }

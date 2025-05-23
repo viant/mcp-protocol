@@ -84,7 +84,7 @@ func (d *Registry) getResourceHandler(uri string) (ResourceHandlerFunc, bool) {
 // The struct will be JSON-marshaled into the ReadResourceResult.Text field.
 // RegisterResource registers a resource using a typed handler that returns a Go struct.
 // The struct will be JSON-marshaled into the ReadResourceResult.Contents.
-func RegisterResource[I any](base *DefaultImplementer, resource schema.Resource, handler func(ctx context.Context, uri string) (*schema.ReadResourceResult, *jsonrpc.Error)) {
+func RegisterResource[I any](registry *Registry, resource schema.Resource, handler func(ctx context.Context, uri string) (*schema.ReadResourceResult, *jsonrpc.Error)) {
 	wrapped := func(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
 		output, rpcErr := handler(ctx, request.Params.Uri)
 		if rpcErr != nil {
@@ -92,5 +92,5 @@ func RegisterResource[I any](base *DefaultImplementer, resource schema.Resource,
 		}
 		return output, nil
 	}
-	base.RegisterResource(resource, wrapped)
+	registry.RegisterResource(resource, wrapped)
 }
