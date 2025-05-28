@@ -23,4 +23,6 @@ const (
 	MethodNotificationProgress        = "notifications/progress"
 	MethodRootsList                   = "roots/list"
 	MethodSamplingCreateMessage       = "sampling/createMessage"
+	MethodElicitationCreate           = "elicitation/create"
+	MethodInteractionCreate           = "interaction/create"
 )
