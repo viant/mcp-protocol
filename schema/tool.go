@@ -8,11 +8,12 @@ import (
 	"time"
 )
 
-// InputSchema is a JSON InputSchema representation of a struct.
-
-// schemaForTypeInternal returns a JSON InputSchema representation for a given reflect.Type.
-// The inSlice flag is used to determine if we are processing an element inside a slice.
-func schemaForTypeInternal(t reflect.Type, inSlice bool) map[string]interface{} {
+// buildJSONSchema constructs a JSON-schema fragment that represents the supplied Go reflect.Type.
+// The `inSlice` flag is an internal recursion marker: it is true when the type
+// currently being processed is the *element* of a slice/array. That allows the
+// algorithm to decide whether automatically added `nullable:true` (for pointer
+// types) should be kept or suppressed.
+func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
 	schema := make(map[string]interface{})
 
 	// Special handling for time.Time: treat as ISO 8601 string.
@@ -25,7 +26,7 @@ func schemaForTypeInternal(t reflect.Type, inSlice bool) map[string]interface{} 
 	// Handle pointer types.
 	if t.Kind() == reflect.Ptr {
 		// Unwrap pointer.
-		schema = schemaForTypeInternal(t.Elem(), inSlice)
+		schema = buildJSONSchema(t.Elem(), inSlice, opts...)
 		// Mark as nullable unless we are processing a slice element.
 		if !inSlice {
 			schema["nullable"] = true
@@ -46,15 +47,15 @@ func schemaForTypeInternal(t reflect.Type, inSlice bool) map[string]interface{} 
 	case reflect.Slice, reflect.Array:
 		schema["type"] = "array"
 		// When processing slice items, set inSlice = true.
-		schema["items"] = schemaForTypeInternal(t.Elem(), true)
+		schema["items"] = buildJSONSchema(t.Elem(), true, opts...)
 	case reflect.Map:
 		schema["type"] = "object"
 		// For maps, set additionalProperties based on the element type.
-		schema["additionalProperties"] = schemaForTypeInternal(t.Elem(), false)
+		schema["additionalProperties"] = buildJSONSchema(t.Elem(), false, opts...)
 	case reflect.Struct:
 		// For structs, recursively convert their fields.
 		schema["type"] = "object"
-		properties, required := structToProperties(t)
+		properties, required := StructToProperties(t, opts...)
 		schema["properties"] = properties
 		if len(required) > 0 {
 			schema["required"] = required
@@ -66,19 +67,73 @@ func schemaForTypeInternal(t reflect.Type, inSlice bool) map[string]interface{} 
 	return schema
 }
 
-// schemaForType is a wrapper that starts schema generation with inSlice=false.
-func schemaForType(t reflect.Type) map[string]interface{} {
-	return schemaForTypeInternal(t, false)
+// typeSchema is a package-internal helper that starts schema generation with
+// `inSlice == false` (i.e. at the “top level”). Callers inside this package
+// should use this instead of calling buildJSONSchema directly so they do not need to
+// know about the recursion flag.
+// use. It hides the recursion flag (`inSlice`) by always starting the walk in
+// "top-level" mode (inSlice == false).
+func typeSchema(t reflect.Type, opts ...StructToPropertiesOption) map[string]interface{} {
+	return buildJSONSchema(t, false, opts...)
 }
 
-// structToProperties converts a struct type into MCP InputSchema properties and required fields.
-func structToProperties(t reflect.Type) (ToolInputSchemaProperties, []string) {
+// StructToPropertiesOption defines an option for controlling field inclusion/exclusion in StructToProperties.
+type StructToPropertiesOption func(*structToPropertiesOptions)
+
+type structToPropertiesOptions struct {
+	SkipFieldHook  func(field reflect.StructField) bool
+	IsRequiredHook func(field reflect.StructField) bool
+	FormatHook     func(field reflect.StructField) string
+	NullableHook   func(field reflect.StructField) *bool
+}
+
+// WithSkipFieldHook returns an option to set a hook for skipping fields based on reflect.StructField.
+func WithSkipFieldHook(hook func(field reflect.StructField) bool) StructToPropertiesOption {
+	return func(o *structToPropertiesOptions) {
+		o.SkipFieldHook = hook
+	}
+}
+
+// WithIsRequiredHook returns an option to set a hook for determining if a field is required based on reflect.StructField.
+func WithIsRequiredHook(hook func(field reflect.StructField) bool) StructToPropertiesOption {
+	return func(o *structToPropertiesOptions) {
+		o.IsRequiredHook = hook
+	}
+}
+
+// WithFormatHook returns an option to set a hook for overriding field format based on reflect.StructField.
+func WithFormatHook(hook func(field reflect.StructField) string) StructToPropertiesOption {
+	return func(o *structToPropertiesOptions) {
+		o.FormatHook = hook
+	}
+}
+
+// WithNullableHook returns an option to explicitly set or unset `nullable` for
+// a given struct field. The hook must return a pointer to bool – *true* to
+// force `nullable:true`, *false* to force it off, and *nil* to keep the default
+// behaviour (automatic for pointer types outside slices).
+func WithNullableHook(hook func(field reflect.StructField) *bool) StructToPropertiesOption {
+	return func(o *structToPropertiesOptions) {
+		o.NullableHook = hook
+	}
+}
+
+// StructToProperties converts a struct type into MCP InputSchema properties and required fields.
+// It accepts optional StructToPropertiesOption to customize behavior (e.g., skipping fields, required logic, format overrides).
+func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolInputSchemaProperties, []string) {
+	var opt structToPropertiesOptions
+	for _, o := range opts {
+		o(&opt)
+	}
+
 	properties := make(ToolInputSchemaProperties)
 	var required []string
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-
+		if opt.SkipFieldHook != nil && opt.SkipFieldHook(field) {
+			continue
+		}
 		// Only process exported fields.
 		if !field.IsExported() {
 			continue
@@ -109,10 +164,27 @@ func structToProperties(t reflect.Type) (ToolInputSchemaProperties, []string) {
 			fieldName = field.Name
 		}
 		// Generate the field's JSON schema.
-		fieldSchema := schemaForType(field.Type)
-		// Apply format tag if present (e.g., date format).
-		if formatTag := field.Tag.Get("format"); formatTag != "" {
-			fieldSchema["format"] = formatTag
+		fieldSchema := typeSchema(field.Type, opts...)
+		// Determine format via hook or tag.
+		var fmtVal string
+		if opt.FormatHook != nil {
+			fmtVal = opt.FormatHook(field)
+		} else {
+			fmtVal = field.Tag.Get("format")
+		}
+		if fmtVal != "" {
+			fieldSchema["format"] = fmtVal
+		}
+
+		// Apply nullable override via hook if provided.
+		if opt.NullableHook != nil {
+			if nullablePtr := opt.NullableHook(field); nullablePtr != nil {
+				if *nullablePtr {
+					fieldSchema["nullable"] = true
+				} else {
+					delete(fieldSchema, "nullable")
+				}
+			}
 		}
 		// Set the property in overall schema.
 		properties[fieldName] = fieldSchema
@@ -129,7 +201,7 @@ func structToProperties(t reflect.Type) (ToolInputSchemaProperties, []string) {
 	return properties, required
 }
 
-func (s *ToolInputSchema) Load(v any) error {
+func (s *ToolInputSchema) Load(v any, options ...StructToPropertiesOption) error {
 	t := reflect.TypeOf(v)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -137,14 +209,14 @@ func (s *ToolInputSchema) Load(v any) error {
 	if t.Kind() != reflect.Struct {
 		return fmt.Errorf("expected a struct type, got %s", t.Kind())
 	}
-	properties, required := structToProperties(t)
+	properties, required := StructToProperties(t, options...)
 	s.Properties = properties
 	s.Required = required
 	s.Type = "object"
 	return nil
 }
 
-// CallToolRequestParams is a structure that holds the parameters for a tool call request.
+// NewCallToolRequestParams creates a new CallToolRequestParams instance from a command struct.
 func NewCallToolRequestParams[T any](name string, cmd T) (*CallToolRequestParams, error) {
 	results := &CallToolRequestParams{Name: name, Arguments: map[string]interface{}{}}
 	data, err := json.Marshal(cmd)
