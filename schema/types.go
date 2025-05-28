@@ -2,10 +2,14 @@
 
 package schema
 
-import "encoding/json"
-import "errors"
-import "fmt"
-import "reflect"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.c
+	"reflect"
+m
+)
 
 // Optional annotations for the client. The client can use annotations to inform
 // how objects are used or displayed
@@ -390,6 +394,9 @@ func (j *CancelledNotification) UnmarshalJSON(value []byte) error {
 // schema, but this is not a closed set: any client can define its own, additional
 // capabilities.
 type ClientCapabilities struct {
+	// Present if the client supports elicitation from the server.
+	Elicitation map[string]interface{} `json:"elicitation,omitempty" yaml:"elicitation,omitempty" mapstructure:"elicitation,omitempty"`
+
 	// Experimental, non-standard capabilities that the client supports.
 	Experimental ClientCapabilitiesExperimental `json:"experimental,omitempty" yaml:"experimental,omitempty" mapstructure:"experimental,omitempty"`
 
@@ -398,6 +405,22 @@ type ClientCapabilities struct {
 
 	// Present if the client supports sampling from an LLM.
 	Sampling ClientCapabilitiesSampling `json:"sampling,omitempty" yaml:"sampling,omitempty" mapstructure:"sampling,omitempty"`
+
+	// Present if the client supports user interaction.
+	UserInteraction *ClientCapabilitiesUserInteraction `json:"userInteraction,omitempty" yaml:"userInteraction,omitempty" mapstructure:"userInteraction,omitempty"`
+}
+
+// Present if the client supports user interaction.
+type ClientCapabilitiesUserInteraction struct {
+	// An array of supported user interaction types. Clients must support at least one
+	// type.
+	//
+	// This specification defines one interaction type:
+	// - "ua": A user agent interaction involving making a request via a User Agent
+	// (e.g. a Web browser)
+	//
+	// Additional interaction types may be negotiated between client and server.
+	Types []string `json:"types" yaml:"types" mapstructure:"types"`
 }
 
 // Experimental, non-standard capabilities that the client supports.
@@ -832,6 +855,168 @@ func (j *CreateMessageResult) UnmarshalJSON(value []byte) error {
 
 // An opaque token used to represent a cursor for pagination.
 type Cursor string
+
+// A request from the server to elicit additional information from the user via the
+// client.
+type ElicitRequest struct {
+	// Method corresponds to the JSON schema field "method".
+	Method string `json:"method" yaml:"method" mapstructure:"method"`
+
+	// Params corresponds to the JSON schema field "params".
+	Params ElicitRequestParams `json:"params" yaml:"params" mapstructure:"params"`
+}
+
+type ElicitRequestParams struct {
+	// The message to present to the user.
+	Message string `json:"message" yaml:"message" mapstructure:"message"`
+
+	// A restricted subset of JSON Schema.
+	// Only top-level properties are allowed, without nesting.
+	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
+}
+
+// A restricted subset of JSON Schema.
+// Only top-level properties are allowed, without nesting.
+type ElicitRequestParamsRequestedSchema struct {
+	// Properties corresponds to the JSON schema field "properties".
+	Properties map[string]interface{} `json:"properties" yaml:"properties" mapstructure:"properties"`
+
+	// Required corresponds to the JSON schema field "required".
+	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitRequestParamsRequestedSchema) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["properties"]; raw != nil && !ok {
+		return fmt.Errorf("field properties in ElicitRequestParamsRequestedSchema: required")
+	}
+	if _, ok := raw["type"]; raw != nil && !ok {
+		return fmt.Errorf("field type in ElicitRequestParamsRequestedSchema: required")
+	}
+	type Plain ElicitRequestParamsRequestedSchema
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ElicitRequestParamsRequestedSchema(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitRequestParams) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["message"]; raw != nil && !ok {
+		return fmt.Errorf("field message in ElicitRequestParams: required")
+	}
+	if _, ok := raw["requestedSchema"]; raw != nil && !ok {
+		return fmt.Errorf("field requestedSchema in ElicitRequestParams: required")
+	}
+	type Plain ElicitRequestParams
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ElicitRequestParams(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitRequest) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["method"]; raw != nil && !ok {
+		return fmt.Errorf("field method in ElicitRequest: required")
+	}
+	if _, ok := raw["params"]; raw != nil && !ok {
+		return fmt.Errorf("field params in ElicitRequest: required")
+	}
+	type Plain ElicitRequest
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ElicitRequest(plain)
+	return nil
+}
+
+// The client's response to an elicitation request.
+type ElicitResult struct {
+	// This result property is reserved by the protocol to allow clients and servers
+	// to attach additional metadata to their responses.
+	Meta map[string]interface{} `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
+
+	// The user action in response to the elicitation.
+	// - "accept": User submitted the form/confirmed the action
+	// - "decline": User explicitly declined the action
+	// - "cancel": User dismissed without making an explicit choice
+	Action ElicitResultAction `json:"action" yaml:"action" mapstructure:"action"`
+
+	// The submitted form data, only present when action is "accept".
+	// Contains values matching the requested schema.
+	Content map[string]interface{} `json:"content,omitempty" yaml:"content,omitempty" mapstructure:"content,omitempty"`
+}
+
+type ElicitResultAction string
+
+const ElicitResultActionAccept ElicitResultAction = "accept"
+const ElicitResultActionCancel ElicitResultAction = "cancel"
+const ElicitResultActionDecline ElicitResultAction = "decline"
+
+var enumValues_ElicitResultAction = []interface{}{
+	"accept",
+	"cancel",
+	"decline",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitResultAction) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ElicitResultAction {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ElicitResultAction, v)
+	}
+	*j = ElicitResultAction(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitResult) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["action"]; raw != nil && !ok {
+		return fmt.Errorf("field action in ElicitResult: required")
+	}
+	type Plain ElicitResult
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ElicitResult(plain)
+	return nil
+}
 
 // The contents of a resource, embedded into a prompt or tool call result.
 //
@@ -2719,6 +2904,184 @@ type ResourceListChangedNotificationParams struct {
 
 type EmbeddedResourceResource_0 = TextResourceContents
 
+// Defines the interaction object for "ua" (user agent) type interactions.
+type UAInteraction struct {
+	// An optional message to provide an explanation to the user about the
+	// interaction.
+	Message *TextContent `json:"message,omitempty" yaml:"message,omitempty" mapstructure:"message,omitempty"`
+
+	// The URL that the user should interact with.
+	Url string `json:"url" yaml:"url" mapstructure:"url"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *UAInteraction) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["url"]; raw != nil && !ok {
+		return fmt.Errorf("field url in UAInteraction: required")
+	}
+	type Plain UAInteraction
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = UAInteraction(plain)
+	return nil
+}
+
+type CreateUserInteractionRequestParamsInteraction_0 struct {
+	AdditionalProperties interface{} `mapstructure:",remain"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CreateUserInteractionRequestParamsInteraction_0) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	type Plain CreateUserInteractionRequestParamsInteraction_0
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	st := reflect.TypeOf(Plain{})
+	for i := range st.NumField() {
+		delete(raw, st.Field(i).Name)
+		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
+	}
+	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
+		return err
+	}
+	*j = CreateUserInteractionRequestParamsInteraction_0(plain)
+	return nil
+}
+
+type CreateUserInteractionRequestParamsInteraction_1 = UAInteraction
+
+// A request from the server to the client, to create a user interaction.
+type CreateUserInteractionRequest struct {
+	// Method corresponds to the JSON schema field "method".
+	Method string `json:"method" yaml:"method" mapstructure:"method"`
+
+	// Params corresponds to the JSON schema field "params".
+	Params CreateUserInteractionRequestParams `json:"params" yaml:"params" mapstructure:"params"`
+}
+
+type CreateUserInteractionRequestParams struct {
+	// The ID of the interaction.
+	Id string `json:"id" yaml:"id" mapstructure:"id"`
+
+	// The interaction object. The schema of the interaction object is dependent on
+	// the type of
+	// interaction.
+	Interaction CreateUserInteractionRequestParamsInteraction `json:"interaction" yaml:"interaction" mapstructure:"interaction"`
+
+	// The type of interaction.
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
+}
+
+// Defines the interaction object for "ua" (user agent) type interactions.
+type CreateUserInteractionRequestParamsInteraction struct {
+	// An optional message to provide an explanation to the user about the
+	// interaction.
+	Message *TextContent `json:"message,omitempty" yaml:"message,omitempty" mapstructure:"message,omitempty"`
+
+	// The URL that the user should interact with.
+	Url string `json:"url" yaml:"url" mapstructure:"url"`
+
+	AdditionalProperties interface{} `mapstructure:",remain"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CreateUserInteractionRequestParamsInteraction) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	var createUserInteractionRequestParamsInteraction_0 CreateUserInteractionRequestParamsInteraction_0
+	var createUserInteractionRequestParamsInteraction_1 CreateUserInteractionRequestParamsInteraction_1
+	var errs []error
+	if err := createUserInteractionRequestParamsInteraction_0.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := createUserInteractionRequestParamsInteraction_1.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) == 2 {
+		return fmt.Errorf("all validators failed: %s", errors.Join(errs...))
+	}
+	type Plain CreateUserInteractionRequestParamsInteraction
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	st := reflect.TypeOf(Plain{})
+	for i := range st.NumField() {
+		delete(raw, st.Field(i).Name)
+		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
+	}
+	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
+		return err
+	}
+	*j = CreateUserInteractionRequestParamsInteraction(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CreateUserInteractionRequestParams) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["id"]; raw != nil && !ok {
+		return fmt.Errorf("field id in CreateUserInteractionRequestParams: required")
+	}
+	if _, ok := raw["interaction"]; raw != nil && !ok {
+		return fmt.Errorf("field interaction in CreateUserInteractionRequestParams: required")
+	}
+	if _, ok := raw["type"]; raw != nil && !ok {
+		return fmt.Errorf("field type in CreateUserInteractionRequestParams: required")
+	}
+	type Plain CreateUserInteractionRequestParams
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = CreateUserInteractionRequestParams(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CreateUserInteractionRequest) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["method"]; raw != nil && !ok {
+		return fmt.Errorf("field method in CreateUserInteractionRequest: required")
+	}
+	if _, ok := raw["params"]; raw != nil && !ok {
+		return fmt.Errorf("field params in CreateUserInteractionRequest: required")
+	}
+	type Plain CreateUserInteractionRequest
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = CreateUserInteractionRequest(plain)
+	return nil
+}
+
+// The client's response to a user interaction/create request from the server.
+type CreateUserInteractionResult struct {
+	// This result property is reserved by the protocol to allow clients and servers
+	// to attach additional metadata to their responses.
+	Meta map[string]interface{} `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *Tool) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
@@ -3045,6 +3408,25 @@ type ServerCapabilities struct {
 	Tools *ServerCapabilitiesTools `json:"tools,omitempty" yaml:"tools,omitempty" mapstructure:"tools,omitempty"`
 }
 
+//// Definition for a tool the client can call.
+//type Tool struct {
+//	// Optional additional tool information.
+//	Annotations *ToolAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+//
+//	// A human-readable description of the tool.
+//	//
+//	// This can be used by clients to improve the LLM's understanding of available
+//	// tools. It can be thought of like a "hint" to the model.
+//	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+//
+//	// A JSON InputSchema object defining the expected parameters for the tool.
+//	InputSchema ToolInputSchema `json:"inputSchema" yaml:"inputSchema" mapstructure:"inputSchema"`
+//
+//	// The name of the tool.
+//	Name string `json:"name" yaml:"name" mapstructure:"name"`
+//}
+//
+
 // Definition for a tool the client can call.
 type Tool struct {
 	// Optional additional tool information.
@@ -3056,11 +3438,48 @@ type Tool struct {
 	// tools. It can be thought of like a "hint" to the model.
 	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
 
-	// A JSON InputSchema object defining the expected parameters for the tool.
+	// A JSON Schema object defining the expected parameters for the tool.
 	InputSchema ToolInputSchema `json:"inputSchema" yaml:"inputSchema" mapstructure:"inputSchema"`
 
 	// The name of the tool.
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
+
+	// An optional JSON Schema object defining the structure of the tool's output
+	// returned in
+	// the structuredContent field of a CallToolResult.
+	OutputSchema *ToolOutputSchema `json:"outputSchema,omitempty" yaml:"outputSchema,omitempty" mapstructure:"outputSchema,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ToolOutputSchema) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["type"]; raw != nil && !ok {
+		return fmt.Errorf("field type in ToolOutputSchema: required")
+	}
+	type Plain ToolOutputSchema
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ToolOutputSchema(plain)
+	return nil
+}
+
+// An optional JSON Schema object defining the structure of the tool's output
+// returned in
+// the structuredContent field of a CallToolResult.
+type ToolOutputSchema struct {
+	// Properties corresponds to the JSON schema field "properties".
+	Properties map[string]map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty" mapstructure:"properties,omitempty"`
+
+	// Required corresponds to the JSON schema field "required".
+	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
 }
 
 type ReadResourceResultContentsElem_0 = TextResourceContents
