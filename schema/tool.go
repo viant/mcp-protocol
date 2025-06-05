@@ -23,20 +23,31 @@ var (
 // It detects and breaks cycles in types, returning an empty object schema on recursion.
 func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
 	schema := make(map[string]interface{})
-	// detect cyclic types: if this type is already being processed, break the cycle
+
+	// initialize cycle-detection state on outermost call
 	visitedMu.Lock()
-	if visitedTypes != nil && visitedTypes[t] {
+	first := visitedTypes == nil
+	if first {
+		visitedTypes = make(map[reflect.Type]bool)
+	}
+	// detect cyclic types: if this type is already being processed, break the cycle
+	if visitedTypes[t] {
 		visitedMu.Unlock()
+		if first {
+			visitedMu.Lock()
+			visitedTypes = nil
+			visitedMu.Unlock()
+		}
 		return map[string]interface{}{"type": "object"}
 	}
-	if visitedTypes != nil {
-		visitedTypes[t] = true
-	}
+	visitedTypes[t] = true
 	visitedMu.Unlock()
+
 	defer func() {
 		visitedMu.Lock()
-		if visitedTypes != nil {
-			delete(visitedTypes, t)
+		delete(visitedTypes, t)
+		if first {
+			visitedTypes = nil
 		}
 		visitedMu.Unlock()
 	}()
@@ -99,22 +110,8 @@ func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOpt
 // use. It hides the recursion flag (`inSlice`) by always starting the walk in
 // "top-level" mode (inSlice == false).
 func typeSchema(t reflect.Type, opts ...StructToPropertiesOption) map[string]interface{} {
-	// initialize cycle-detection state on outermost call
-	visitedMu.Lock()
-	first := visitedTypes == nil
-	if first {
-		visitedTypes = make(map[reflect.Type]bool)
-	}
-	visitedMu.Unlock()
-
-	schema := buildJSONSchema(t, false, opts...)
-
-	if first {
-		visitedMu.Lock()
-		visitedTypes = nil
-		visitedMu.Unlock()
-	}
-	return schema
+	// typeSchema hides the recursion flag for callers at the top level.
+	return buildJSONSchema(t, false, opts...)
 }
 
 // StructToPropertiesOption defines an option for controlling field inclusion/exclusion in StructToProperties.
