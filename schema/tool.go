@@ -5,7 +5,14 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
+)
+
+// visitedTypes tracks types currently being processed to detect cyclic definitions.
+var (
+	visitedMu    sync.Mutex
+	visitedTypes map[reflect.Type]bool
 )
 
 // buildJSONSchema constructs a JSON-schema fragment that represents the supplied Go reflect.Type.
@@ -13,8 +20,26 @@ import (
 // currently being processed is the *element* of a slice/array. That allows the
 // algorithm to decide whether automatically added `nullable:true` (for pointer
 // types) should be kept or suppressed.
+// It detects and breaks cycles in types, returning an empty object schema on recursion.
 func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
 	schema := make(map[string]interface{})
+	// detect cyclic types: if this type is already being processed, break the cycle
+	visitedMu.Lock()
+	if visitedTypes != nil && visitedTypes[t] {
+		visitedMu.Unlock()
+		return map[string]interface{}{"type": "object"}
+	}
+	if visitedTypes != nil {
+		visitedTypes[t] = true
+	}
+	visitedMu.Unlock()
+	defer func() {
+		visitedMu.Lock()
+		if visitedTypes != nil {
+			delete(visitedTypes, t)
+		}
+		visitedMu.Unlock()
+	}()
 
 	// Special handling for time.Time: treat as ISO 8601 string.
 	if t == reflect.TypeOf(time.Time{}) {
@@ -74,7 +99,22 @@ func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOpt
 // use. It hides the recursion flag (`inSlice`) by always starting the walk in
 // "top-level" mode (inSlice == false).
 func typeSchema(t reflect.Type, opts ...StructToPropertiesOption) map[string]interface{} {
-	return buildJSONSchema(t, false, opts...)
+	// initialize cycle-detection state on outermost call
+	visitedMu.Lock()
+	first := visitedTypes == nil
+	if first {
+		visitedTypes = make(map[reflect.Type]bool)
+	}
+	visitedMu.Unlock()
+
+	schema := buildJSONSchema(t, false, opts...)
+
+	if first {
+		visitedMu.Lock()
+		visitedTypes = nil
+		visitedMu.Unlock()
+	}
+	return schema
 }
 
 // StructToPropertiesOption defines an option for controlling field inclusion/exclusion in StructToProperties.
