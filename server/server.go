@@ -8,8 +8,8 @@ import (
 	"github.com/viant/mcp-protocol/logger"
 )
 
-// Implementer represents a implementer implementer
-type Implementer interface {
+// Server represents a implementer implementer
+type Server interface {
 	Operations
 
 	OnNotification(ctx context.Context, notification *jsonrpc.Notification)
@@ -18,5 +18,5 @@ type Implementer interface {
 	Implements(method string) bool
 }
 
-// NewImplementer creates new implementer
-type NewImplementer func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Implementer, error)
+// NewServer creates new implementer
+type NewServer func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Server, error)

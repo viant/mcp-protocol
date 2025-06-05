@@ -10,13 +10,13 @@ import (
 	"github.com/viant/mcp-protocol/server"
 )
 
-// MyImplementer is a sample MCP implementer embedding the default Base.
-type MyImplementer struct {
-	*server.DefaultImplementer
+// MyMCPServer is a sample MCP implementer embedding the default Base.
+type MyMCPServer struct {
+	*server.DefaultServer
 }
 
 // ListResources implements the resources/list method.
-func (i *MyImplementer) ListResources(
+func (i *MyMCPServer) ListResources(
 	ctx context.Context,
 	req *schema.ListResourcesRequest,
 ) (*schema.ListResourcesResult, *jsonrpc.Error) {
@@ -25,19 +25,19 @@ func (i *MyImplementer) ListResources(
 }
 
 // Implements indicates which methods this implementer supports.
-func (i *MyImplementer) Implements(method string) bool {
+func (i *MyMCPServer) Implements(method string) bool {
 	return method == schema.MethodResourcesList
 }
 
-// NewMyImplementer returns a factory for MyImplementer.
-func NewMyImplementer() server.NewImplementer {
+// NewMCPServer returns a factory for MyMCPServer.
+func NewMCPServer() server.NewServer {
 	return func(
 		ctx context.Context,
 		notifier transport.Notifier,
 		log logger.Logger,
 		client client.Operations,
-	) (server.Implementer, error) {
-		base := server.NewDefaultImplementer(notifier, log, client)
-		return &MyImplementer{DefaultImplementer: base}, nil
+	) (server.Server, error) {
+		base := server.NewDefaultServer(notifier, log, client)
+		return &MyMCPServer{DefaultServer: base}, nil
 	}
 }

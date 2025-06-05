@@ -27,7 +27,7 @@ type ResourceEntry struct {
 // Resources is a collection of ResourceEntry
 type Resources []*ResourceEntry
 
-// RegisterResource registers a resource with metadata and handler on this DefaultImplementer.
+// RegisterResource registers a resource with metadata and handler on this DefaultServer.
 func (d *Registry) RegisterResource(resource schema.Resource, handler ResourceHandlerFunc) {
 	d.Methods.Put(schema.MethodResourcesList, true)
 	d.Methods.Put(schema.MethodResourcesRead, true)
@@ -37,7 +37,7 @@ func (d *Registry) RegisterResource(resource schema.Resource, handler ResourceHa
 	})
 }
 
-// RegisterResourceTemplate registers a resource template on this DefaultImplementer.
+// RegisterResourceTemplate registers a resource template on this DefaultServer.
 func (d *Registry) RegisterResourceTemplate(template schema.ResourceTemplate, handler ResourceHandlerFunc) {
 	d.Methods.Put(schema.MethodResourcesTemplatesList, true)
 	d.ResourceTemplateRegistry.Put(template.UriTemplate, &ResourceTemplateEntry{
@@ -46,7 +46,7 @@ func (d *Registry) RegisterResourceTemplate(template schema.ResourceTemplate, ha
 	})
 }
 
-// ListRegisteredResources returns metadata for all registered resources on this DefaultImplementer.
+// ListRegisteredResources returns metadata for all registered resources on this DefaultServer.
 func (d *Registry) ListRegisteredResources() []schema.Resource {
 	var list []schema.Resource
 	d.ResourceRegistry.Range(func(_ string, entry *ResourceEntry) bool {
@@ -56,7 +56,7 @@ func (d *Registry) ListRegisteredResources() []schema.Resource {
 	return list
 }
 
-// ListRegisteredResourceTemplates returns metadata for all registered resource templates on this DefaultImplementer.
+// ListRegisteredResourceTemplates returns metadata for all registered resource templates on this DefaultServer.
 func (d *Registry) ListRegisteredResourceTemplates() []schema.ResourceTemplate {
 	var list []schema.ResourceTemplate
 	d.ResourceTemplateRegistry.Range(func(_ string, entry *ResourceTemplateEntry) bool {
@@ -66,7 +66,7 @@ func (d *Registry) ListRegisteredResourceTemplates() []schema.ResourceTemplate {
 	return list
 }
 
-// getResourceHandler retrieves the handler for a registered resource on this DefaultImplementer.
+// getResourceHandler retrieves the handler for a registered resource on this DefaultServer.
 func (d *Registry) getResourceHandler(uri string) (ResourceHandlerFunc, bool) {
 	templateEntry, ok := d.ResourceTemplateRegistry.Get(uri)
 	if ok {

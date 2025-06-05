@@ -30,9 +30,9 @@ Key features:
 `github.com/viant/mcp-protocol` is the Go module containing the shared Model Context Protocol (MCP) contracts:
 
 - **schema**: JSON-RPC request, result, and notification types generated from the MCP JSON schema.
-- **server**: `server.Operations`, `server.Implementer` interfaces and
-  `server.DefaultImplementer` default implementer with no-op stubs.
-- **client**: `client.Operations`, `client.Implementer` interfaces for MCP clients.
+- **server**: `server.Operations`, `server.Server` interface and
+  `server.DefaultServer` default server with no-op stubs.
+- **client**: `client.Operations`, `client.Client` interface for MCP clients.
 - **logger**: logging interface (`Logger`) for implementers to emit JSON-RPC notifications.
 - **oauth2**: defines meta information for OAuth2 authorization and authentication flows.
 - **authorization**: authentication definition for global and fine grain resource/tool level authorization
@@ -56,9 +56,9 @@ import (
 
 func Usage_Example() {
 
-  newImplementer := serverproto.WithDefaultImplementer(context.Background(), func(implementer *serverproto.DefaultImplementer) {
+  newServer := serverproto.WithDefaultServer(context.Background(), func(srv *serverproto.DefaultServer) {
     // Register a simple resource
-    implementer.RegisterResource(schema.Resource{Name: "hello", Uri: "/hello"},
+    srv.RegisterResource(schema.Resource{Name: "hello", Uri: "/hello"},
       func(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
         return &schema.ReadResourceResult{Contents: []schema.ReadResourceResultContentsElem{{Text: "Hello, world!"}}}, nil
       })
@@ -68,7 +68,7 @@ func Usage_Example() {
       B int `json:"b"`
     }
     // Register a simple calculator tool: adds two integers
-    if err := serverproto.RegisterTool[*Addition](implementer, "add", "Add two integers", func(ctx context.Context, input *Addition) (*schema.CallToolResult, *jsonrpc.Error) {
+    if err := serverproto.RegisterTool[*Addition](srv, "add", "Add two integers", func(ctx context.Context, input *Addition) (*schema.CallToolResult, *jsonrpc.Error) {
       sum := input.A + input.B
       return &schema.CallToolResult{Content: []schema.CallToolResultContentElem{{Text: fmt.Sprintf("%d", sum)}}}, nil
     }); err != nil {
@@ -77,7 +77,7 @@ func Usage_Example() {
   })
 
   srv, err := server.New(
-    server.WithNewImplementer(newImplementer),
+    server.WithNewImplementer(newServer),
     server.WithImplementation(schema.Implementation{"default", "1.0"}),
   )
   if err != nil {
@@ -134,13 +134,13 @@ func (i *MyImplementer) ReadResource(ctx context.Context, request *schema.ReadRe
 }
 
 // NewMyImplementer returns a factory for MyImplementer.
-func NewMyImplementer() server.NewImplementer {
+func NewMyImplementer() server.NewServer {
   return func(
           ctx context.Context,
           notifier transport.Notifier,
           log logger.Logger,
           aClient client.Operations,
-  ) server.Implementer {
+) server.Server {
     base := server.NewDefaultImplementer(notifier, log, aClient)
     return &MyImplementer{DefaultImplementer: base}
   }

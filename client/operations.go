@@ -11,4 +11,6 @@ type Operations interface {
 	CreateMessage(ctx context.Context, params *schema.CreateMessageRequestParams) (*schema.CreateMessageResult, *jsonrpc.Error)
 	Elicit(ctx context.Context, params *schema.ElicitRequestParams) (*schema.ElicitResult, *jsonrpc.Error)
 	CreateUserInteraction(ctx context.Context, params *schema.CreateUserInteractionRequestParams) (*schema.CreateUserInteractionResult, *jsonrpc.Error)
+	Implements(method string) bool
+	Init(ctx context.Context, capabilities *schema.ClientCapabilities)
 }

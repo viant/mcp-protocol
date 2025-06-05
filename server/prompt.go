@@ -18,7 +18,7 @@ type PromptEntry struct {
 // Prompts is a collection of PromptEntry
 type Prompts []*PromptEntry
 
-// RegisterPrompts registers a prompt on this DefaultImplementer.
+// RegisterPrompts registers a prompt on this DefaultServer.
 func (d *Registry) RegisterPrompts(prompt *schema.Prompt, handler PromptHandlerFunc) {
 	d.Methods.Put(schema.MethodPromptsList, true)
 	d.Prompts.Put(prompt.Name, &PromptEntry{Prompt: prompt, Handler: handler})
