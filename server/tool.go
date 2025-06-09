@@ -70,7 +70,7 @@ func RegisterTool[I any, O any](registry *Registry, name string, description str
 	var inputSchema schema.ToolInputSchema
 	sampleType := reflect.TypeOf(inVar)
 	if sampleType.Kind() == reflect.Pointer {
-		if err := inputSchema.Load(inVar); err != nil {
+		if err := inputSchema.Load(&inVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	} else {
@@ -83,11 +83,11 @@ func RegisterTool[I any, O any](registry *Registry, name string, description str
 	var outputSchema schema.ToolOutputSchema
 	outputType := reflect.TypeOf(outVar)
 	if outputType.Kind() == reflect.Pointer {
-		if err := outputSchema.Load(inVar); err != nil {
+		if err := outputSchema.Load(&outVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	} else {
-		if err := outputSchema.Load(&inVar); err != nil {
+		if err := outputSchema.Load(&outVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	}
