@@ -30,8 +30,8 @@ Key features:
 `github.com/viant/mcp-protocol` is the Go module containing the shared Model Context Protocol (MCP) contracts:
 
 - **schema**: JSON-RPC request, result, and notification types generated from the MCP JSON schema.
-- **server**: `server.Operations`, `server.Server` interface and
-  `server.DefaultServer` default server with no-op stubs.
+- **server**: `server.Operations`, `server.Handler` interface and
+  `server.DefaultHandler` default handler with no-op stubs.
 - **client**: `client.Operations`, `client.Client` interface for MCP clients.
 - **logger**: logging interface (`Logger`) for implementers to emit JSON-RPC notifications.
 - **oauth2**: defines meta information for OAuth2 authorization and authentication flows.
@@ -56,9 +56,9 @@ import (
 
 func Usage_Example() {
 
-  newServer := serverproto.WithDefaultServer(context.Background(), func(srv *serverproto.DefaultServer) {
+  newHandler := serverproto.WithDefaultHandler(context.Background(), func(h *serverproto.DefaultHandler) {
     // Register a simple resource
-    srv.RegisterResource(schema.Resource{Name: "hello", Uri: "/hello"},
+    h.RegisterResource(schema.Resource{Name: "hello", Uri: "/hello"},
       func(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
         return &schema.ReadResourceResult{Contents: []schema.ReadResourceResultContentsElem{{Text: "Hello, world!"}}}, nil
       })
@@ -68,7 +68,7 @@ func Usage_Example() {
       B int `json:"b"`
     }
     // Register a simple calculator tool: adds two integers
-    if err := serverproto.RegisterTool[*Addition](srv, "add", "Add two integers", func(ctx context.Context, input *Addition) (*schema.CallToolResult, *jsonrpc.Error) {
+    if err := serverproto.RegisterTool[*Addition](h, "add", "Add two integers", func(ctx context.Context, input *Addition) (*schema.CallToolResult, *jsonrpc.Error) {
       sum := input.A + input.B
       return &schema.CallToolResult{Content: []schema.CallToolResultContentElem{{Text: fmt.Sprintf("%d", sum)}}}, nil
     }); err != nil {
@@ -77,7 +77,7 @@ func Usage_Example() {
   })
 
   srv, err := server.New(
-    server.WithNewImplementer(newServer),
+    server.WithNewHandler(newHandler),
     server.WithImplementation(schema.Implementation{"default", "1.0"}),
   )
   if err != nil {
@@ -107,7 +107,7 @@ import (
 
 // MyImplementer is a sample MCP implementer embedding the default Base.
 type MyImplementer struct {
-  *server.DefaultImplementer
+  *server.DefaultHandler
 }
 
 // ListResources implements the resources/list method.
@@ -125,7 +125,7 @@ func (i *MyImplementer) Implements(method string) bool {
   case schema.MethodResourcesList, schema.MethodResourcesRead:
     return true
   }
-  return i.DefaultImplementer.Implements(method)
+  return i.DefaultHandler.Implements(method)
 }
 
 func (i *MyImplementer) ReadResource(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
@@ -134,15 +134,15 @@ func (i *MyImplementer) ReadResource(ctx context.Context, request *schema.ReadRe
 }
 
 // NewMyImplementer returns a factory for MyImplementer.
-func NewMyImplementer() server.NewServer {
+func NewMyImplementer() server.NewHandler {
   return func(
           ctx context.Context,
           notifier transport.Notifier,
           log logger.Logger,
           aClient client.Operations,
-) server.Server {
-    base := server.NewDefaultImplementer(notifier, log, aClient)
-    return &MyImplementer{DefaultImplementer: base}
+) server.Handler {
+    base := server.NewDefaultHandler(notifier, log, aClient)
+    return &MyImplementer{DefaultHandler: base}
   }
 }
 

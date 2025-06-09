@@ -12,7 +12,7 @@ import (
 
 // MyMCPServer is a sample MCP implementer embedding the default Base.
 type MyMCPServer struct {
-	*server.DefaultServer
+	*server.DefaultHandler
 }
 
 // ListResources implements the resources/list method.
@@ -30,14 +30,14 @@ func (i *MyMCPServer) Implements(method string) bool {
 }
 
 // NewMCPServer returns a factory for MyMCPServer.
-func NewMCPServer() server.NewServer {
+func NewMCPServer() server.NewHandler {
 	return func(
 		ctx context.Context,
 		notifier transport.Notifier,
 		log logger.Logger,
 		client client.Operations,
-	) (server.Server, error) {
-		base := server.NewDefaultServer(notifier, log, client)
-		return &MyMCPServer{DefaultServer: base}, nil
+	) (server.Handler, error) {
+		base := server.NewDefaultHandler(notifier, log, client)
+		return &MyMCPServer{DefaultHandler: base}, nil
 	}
 }

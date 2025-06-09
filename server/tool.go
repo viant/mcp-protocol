@@ -4,26 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	"github.com/viant/jsonrpc"
 	"github.com/viant/mcp-protocol/schema"
-	"reflect"
 )
 
 // ToolHandlerFunc defines a function to handle a tool call.
 type ToolHandlerFunc func(ctx context.Context, request *schema.CallToolRequest) (*schema.CallToolResult, *jsonrpc.Error)
 
-// ToolEntry holds a handler with its metadata.
+// ToolEntry holds a handler together with its public metadata.
 type ToolEntry struct {
 	Handler  ToolHandlerFunc
 	Metadata schema.Tool
 }
 
-// Tools is a collection of ToolEntry
-type Tools []*ToolEntry
-
-// RegisterToolWithSchema registers a tool with name, description, input schema, and handler on this Base.
-// The tool will be advertised to clients with the provided metadata.
-func (d *Registry) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, outputSchema *schema.ToolOutputSchema, handler ToolHandlerFunc) {
+// RegisterToolWithSchema registers a tool with an explicit JSON schema.
+func (d *Registry) RegisterToolWithSchema(name, description string, inputSchema schema.ToolInputSchema, outputSchema *schema.ToolOutputSchema, handler ToolHandlerFunc) {
 	d.RegisterTool(&ToolEntry{
 		Handler: handler,
 		Metadata: schema.Tool{
@@ -35,14 +32,14 @@ func (d *Registry) RegisterToolWithSchema(name string, description string, input
 	})
 }
 
-// RegisterTool registers a tool with name, description, input schema, and handler
+// RegisterTool adds a prepared ToolEntry to the registry.
 func (d *Registry) RegisterTool(entry *ToolEntry) {
 	d.Methods.Put(schema.MethodToolsList, true)
 	d.Methods.Put(schema.MethodToolsCall, true)
 	d.ToolRegistry.Put(entry.Metadata.Name, entry)
 }
 
-// ListRegisteredTools returns metadata for all registered tools on this Base.
+// ListRegisteredTools returns metadata for all registered tools.
 func (d *Registry) ListRegisteredTools() []schema.Tool {
 	var tools []schema.Tool
 	d.ToolRegistry.Range(func(_ string, entry *ToolEntry) bool {
@@ -52,47 +49,48 @@ func (d *Registry) ListRegisteredTools() []schema.Tool {
 	return tools
 }
 
-// getToolHandler retrieves the handler for a registered tool on this Base.
+// getToolHandler retrieves the handler for a registered tool.
 func (d *Registry) getToolHandler(name string) (ToolHandlerFunc, bool) {
-	entry, ok := d.ToolRegistry.Get(name)
-	if !ok {
-		return nil, false
+	if entry, ok := d.ToolRegistry.Get(name); ok {
+		return entry.Handler, true
 	}
-	return entry.Handler, true
+	return nil, false
 }
 
-// RegisterTool registers a tool on this Base by deriving its input schema from a struct type.
-// Handler receives a typed input value and returns a CallToolResult.
-func RegisterTool[I any, O any](registry *Registry, name string, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
-	// Derive input schema from struct type I
+// RegisterTool derives JSON schemas from the generic I/O types and registers the tool.
+func RegisterTool[I any, O any](registry *Registry, name, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
+	var (
+		inVar     I
+		outVar    O
+		inSchema  schema.ToolInputSchema
+		outSchema schema.ToolOutputSchema
+	)
 
-	var inVar I
-	var inputSchema schema.ToolInputSchema
+	// Build input schema
 	sampleType := reflect.TypeOf(inVar)
 	if sampleType.Kind() == reflect.Pointer {
-		if err := inputSchema.Load(inVar); err != nil {
+		if err := inSchema.Load(inVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	} else {
-		if err := inputSchema.Load(&inVar); err != nil {
+		if err := inSchema.Load(&inVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	}
 
-	var outVar O
-	var outputSchema schema.ToolOutputSchema
+	// Build output schema
 	outputType := reflect.TypeOf(outVar)
 	if outputType.Kind() == reflect.Pointer {
-		if err := outputSchema.Load(outVar); err != nil {
-			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
+		if err := outSchema.Load(outVar); err != nil {
+			return fmt.Errorf("failed to derive output schema for tool %s: %w", name, err)
 		}
 	} else {
-		if err := outputSchema.Load(&outVar); err != nil {
-			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
+		if err := outSchema.Load(&outVar); err != nil {
+			return fmt.Errorf("failed to derive output schema for tool %s: %w", name, err)
 		}
 	}
 
-	// Wrap handler to unmarshal arguments into typed struct
+	// Wrap the typed handler so it matches ToolHandlerFunc.
 	wrapped := func(ctx context.Context, request *schema.CallToolRequest) (*schema.CallToolResult, *jsonrpc.Error) {
 		var input I
 		if args := request.Params.Arguments; args != nil {
@@ -106,7 +104,7 @@ func RegisterTool[I any, O any](registry *Registry, name string, description str
 		}
 		return handler(ctx, input)
 	}
-	// Register with metadata and wrapped handler on this Base
-	registry.RegisterToolWithSchema(name, description, inputSchema, &outputSchema, wrapped)
+
+	registry.RegisterToolWithSchema(name, description, inSchema, &outSchema, wrapped)
 	return nil
 }

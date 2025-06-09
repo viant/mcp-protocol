@@ -11,9 +11,9 @@ import (
 	"github.com/viant/mcp-protocol/syncmap"
 )
 
-// DefaultServer provides default implementations for server-side methods.
-// You can embed this in your own Server and register tools/resources via its helper methods.
-type DefaultServer struct {
+// DefaultHandler provides default implementations for server-side methods.
+// You can embed this in your own Handler and register tools/resources via its helper methods.
+type DefaultHandler struct {
 	Notifier           transport.Notifier
 	Logger             logger.Logger
 	Client             client.Operations
@@ -24,8 +24,9 @@ type DefaultServer struct {
 }
 
 // Initialize stores the initialization parameters.
-func (d *DefaultServer) Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult) {
+func (d *DefaultHandler) Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult) {
 	d.ClientInitialize = init
+	d.Client.Init(ctx, &d.ClientInitialize.Capabilities)
 	if d.ServerCapabilities != nil {
 		result.Capabilities = *d.ServerCapabilities
 	}
@@ -44,7 +45,7 @@ func (d *DefaultServer) Initialize(ctx context.Context, init *schema.InitializeR
 }
 
 // ListResources returns method-not-found by default.
-func (d *DefaultServer) ListResources(ctx context.Context, request *schema.ListResourcesRequest) (*schema.ListResourcesResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListResources(ctx context.Context, request *schema.ListResourcesRequest) (*schema.ListResourcesResult, *jsonrpc.Error) {
 	// Return list of registered resources
 	resources := d.ListRegisteredResources()
 	return &schema.ListResourcesResult{
@@ -53,7 +54,7 @@ func (d *DefaultServer) ListResources(ctx context.Context, request *schema.ListR
 }
 
 // ListResourceTemplates returns method-not-found by default.
-func (d *DefaultServer) ListResourceTemplates(ctx context.Context, request *schema.ListResourceTemplatesRequest) (*schema.ListResourceTemplatesResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *schema.ListResourceTemplatesRequest) (*schema.ListResourceTemplatesResult, *jsonrpc.Error) {
 	// Return list of registered resource templates
 	templates := d.ListRegisteredResourceTemplates()
 	return &schema.ListResourceTemplatesResult{
@@ -62,7 +63,7 @@ func (d *DefaultServer) ListResourceTemplates(ctx context.Context, request *sche
 }
 
 // ReadResource returns method-not-found by default.
-func (d *DefaultServer) ReadResource(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ReadResource(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
 	// Delegate to registered resource handler
 	handler, ok := d.getResourceHandler(request.Params.Uri)
 	if !ok {
@@ -72,19 +73,19 @@ func (d *DefaultServer) ReadResource(ctx context.Context, request *schema.ReadRe
 }
 
 // Subscribe adds the URI to the subscription map.
-func (d *DefaultServer) Subscribe(ctx context.Context, request *schema.SubscribeRequest) (*schema.SubscribeResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Subscribe(ctx context.Context, request *schema.SubscribeRequest) (*schema.SubscribeResult, *jsonrpc.Error) {
 	d.Subscription.Put(request.Params.Uri, true)
 	return &schema.SubscribeResult{}, nil
 }
 
 // Unsubscribe removes the URI from the subscription map.
-func (d *DefaultServer) Unsubscribe(ctx context.Context, request *schema.UnsubscribeRequest) (*schema.UnsubscribeResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Unsubscribe(ctx context.Context, request *schema.UnsubscribeRequest) (*schema.UnsubscribeResult, *jsonrpc.Error) {
 	d.Subscription.Delete(request.Params.Uri)
 	return &schema.UnsubscribeResult{}, nil
 }
 
 // ListTools returns method-not-found by default.
-func (d *DefaultServer) ListTools(ctx context.Context, request *schema.ListToolsRequest) (*schema.ListToolsResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListTools(ctx context.Context, request *schema.ListToolsRequest) (*schema.ListToolsResult, *jsonrpc.Error) {
 	// Return the list of registered tools
 	tools := d.ListRegisteredTools()
 	if !schema.IsProtocolNewer(d.ClientInitialize.ProtocolVersion, "2025-03-26") {
@@ -100,7 +101,7 @@ func (d *DefaultServer) ListTools(ctx context.Context, request *schema.ListTools
 }
 
 // CallTool returns method-not-found by default.
-func (d *DefaultServer) CallTool(ctx context.Context, request *schema.CallToolRequest) (*schema.CallToolResult, *jsonrpc.Error) {
+func (d *DefaultHandler) CallTool(ctx context.Context, request *schema.CallToolRequest) (*schema.CallToolResult, *jsonrpc.Error) {
 	// Delegate to the registered tool handler
 	handler, ok := d.getToolHandler(request.Params.Name)
 	if !ok {
@@ -110,16 +111,16 @@ func (d *DefaultServer) CallTool(ctx context.Context, request *schema.CallToolRe
 }
 
 // Complete returns method-not-found by default.
-func (d *DefaultServer) Complete(ctx context.Context, request *schema.CompleteRequest) (*schema.CompleteResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Complete(ctx context.Context, request *schema.CompleteRequest) (*schema.CompleteResult, *jsonrpc.Error) {
 	return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("method %v not found", request.Method), nil)
 }
 
 // OnNotification is a no-op by default.
-func (d *DefaultServer) OnNotification(ctx context.Context, notification *jsonrpc.Notification) {
+func (d *DefaultHandler) OnNotification(ctx context.Context, notification *jsonrpc.Notification) {
 }
 
-// ListPrompts lists all registered prompts on this DefaultServer.
-func (d *DefaultServer) ListPrompts(ctx context.Context, request *schema.ListPromptsRequest) (*schema.ListPromptsResult, *jsonrpc.Error) {
+// ListPrompts lists all registered prompts on this DefaultHandler.
+func (d *DefaultHandler) ListPrompts(ctx context.Context, request *schema.ListPromptsRequest) (*schema.ListPromptsResult, *jsonrpc.Error) {
 	result := &schema.ListPromptsResult{}
 	for _, entry := range d.Prompts.Values() {
 		result.Prompts = append(result.Prompts, *entry.Prompt)
@@ -128,7 +129,7 @@ func (d *DefaultServer) ListPrompts(ctx context.Context, request *schema.ListPro
 }
 
 // GetPrompt returns the result of a prompt call.
-func (d *DefaultServer) GetPrompt(ctx context.Context, request *schema.GetPromptRequest) (*schema.GetPromptResult, *jsonrpc.Error) {
+func (d *DefaultHandler) GetPrompt(ctx context.Context, request *schema.GetPromptRequest) (*schema.GetPromptResult, *jsonrpc.Error) {
 	promptEntry, ok := d.Prompts.Get(request.Params.Name)
 	if !ok {
 		return nil, jsonrpc.NewMethodNotFound(
@@ -146,15 +147,15 @@ func (d *DefaultServer) GetPrompt(ctx context.Context, request *schema.GetPrompt
 }
 
 // Implements returns true for supported methods.
-func (d *DefaultServer) Implements(method string) bool {
+func (d *DefaultHandler) Implements(method string) bool {
 	has, _ := d.Methods.Get(method)
 	return has
 }
 
-// NewDefaultServer creates a new DefaultServer with initialized registries.
+// NewDefaultHandler creates a new DefaultHandler with initialized registries.
 // You can then call RegisterResource, RegisterTool, etc., on it before running the server.
-func NewDefaultServer(notifier transport.Notifier, logger logger.Logger, client client.Operations) *DefaultServer {
-	return &DefaultServer{
+func NewDefaultHandler(notifier transport.Notifier, logger logger.Logger, client client.Operations) *DefaultHandler {
+	return &DefaultHandler{
 		Notifier:     notifier,
 		Logger:       logger,
 		Client:       client,
@@ -163,9 +164,9 @@ func NewDefaultServer(notifier transport.Notifier, logger logger.Logger, client 
 	}
 }
 
-func WithDefaultServer(ctx context.Context, options ...Option) NewServer {
-	return func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Server, error) {
-		implementer := NewDefaultServer(notifier, logger, client)
+func WithDefaultHandler(ctx context.Context, options ...Option) NewHandler {
+	return func(ctx context.Context, notifier transport.Notifier, logger logger.Logger, client client.Operations) (Handler, error) {
+		implementer := NewDefaultHandler(notifier, logger, client)
 		for _, option := range options {
 			if err := option(implementer); err != nil {
 				return nil, err

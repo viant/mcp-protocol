@@ -2,9 +2,8 @@ package server
 
 import "github.com/viant/mcp-protocol/syncmap"
 
-// Registry holds registered handlers and tools.
+// Registry holds registered tools, resources, prompts, etc. for a handler instance.
 type Registry struct {
-	// ToolRegistry holds per-instance registered tools and handlers.
 	ToolRegistry             *syncmap.Map[string, *ToolEntry]
 	ResourceRegistry         *syncmap.Map[string, *ResourceEntry]
 	ResourceTemplateRegistry *syncmap.Map[string, *ResourceTemplateEntry]
@@ -12,9 +11,8 @@ type Registry struct {
 	Methods                  *syncmap.Map[string, bool]
 }
 
-// NewHandlerRegistry creates a new Registry instance.
+// NewRegistry creates and initialises an empty Registry.
 func NewRegistry() *Registry {
-	// constructor for Registry
 	return &Registry{
 		ToolRegistry:             syncmap.NewMap[string, *ToolEntry](),
 		ResourceRegistry:         syncmap.NewMap[string, *ResourceEntry](),

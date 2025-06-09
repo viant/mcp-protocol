@@ -6,7 +6,7 @@
 // listing, sampling, user interaction, etc.).  Implementations embed or
 // implement Operations to gain compile-time safety when calling an MCP server.
 //
-// In addition, the Client interface extends Operations with the ability to
+// In addition, the Handler interface extends Operations with the ability to
 // receive asynchronous JSON-RPC notifications via the OnNotification hook.
 //
 // The package contains *interfaces only* and purposefully holds no concrete

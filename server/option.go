@@ -1,4 +1,4 @@
 package server
 
-// Option is a default implementation of the server interface
-type Option func(server *DefaultServer) error
+// Option can be supplied to WithDefaultHandler to mutate the handler before use.
+type Option func(server *DefaultHandler) error

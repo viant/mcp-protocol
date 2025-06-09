@@ -6,7 +6,7 @@ import (
 	"github.com/viant/mcp-protocol/schema"
 )
 
-// Operations represents implementation interface
+// Operations lists all JSON-RPC methods that an MCP handler may implement.
 type Operations interface {
 	Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult)
 

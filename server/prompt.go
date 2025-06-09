@@ -6,7 +6,7 @@ import (
 	"github.com/viant/mcp-protocol/schema"
 )
 
-// PromptHandlerFunc defines a function to handle a tool call.
+// PromptHandlerFunc defines a function to handle a prompt call.
 type PromptHandlerFunc func(ctx context.Context, request *schema.GetPromptRequestParams) (*schema.GetPromptResult, *jsonrpc.Error)
 
 // PromptEntry holds a handler with its metadata.
@@ -15,10 +15,10 @@ type PromptEntry struct {
 	Prompt  *schema.Prompt
 }
 
-// Prompts is a collection of PromptEntry
+// Prompts is a collection of PromptEntry.
 type Prompts []*PromptEntry
 
-// RegisterPrompts registers a prompt on this DefaultServer.
+// RegisterPrompts registers a prompt on this handler.
 func (d *Registry) RegisterPrompts(prompt *schema.Prompt, handler PromptHandlerFunc) {
 	d.Methods.Put(schema.MethodPromptsList, true)
 	d.Prompts.Put(prompt.Name, &PromptEntry{Prompt: prompt, Handler: handler})
