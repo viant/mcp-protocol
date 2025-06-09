@@ -23,13 +23,14 @@ type Tools []*ToolEntry
 
 // RegisterToolWithSchema registers a tool with name, description, input schema, and handler on this Base.
 // The tool will be advertised to clients with the provided metadata.
-func (d *Registry) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, handler ToolHandlerFunc) {
+func (d *Registry) RegisterToolWithSchema(name string, description string, inputSchema schema.ToolInputSchema, outputSchema *schema.ToolOutputSchema, handler ToolHandlerFunc) {
 	d.RegisterTool(&ToolEntry{
 		Handler: handler,
 		Metadata: schema.Tool{
-			Name:        name,
-			Description: &description,
-			InputSchema: inputSchema,
+			Name:         name,
+			Description:  &description,
+			InputSchema:  inputSchema,
+			OutputSchema: outputSchema,
 		},
 	})
 }
@@ -62,18 +63,31 @@ func (d *Registry) getToolHandler(name string) (ToolHandlerFunc, bool) {
 
 // RegisterTool registers a tool on this Base by deriving its input schema from a struct type.
 // Handler receives a typed input value and returns a CallToolResult.
-func RegisterTool[I any](registry *Registry, name string, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
+func RegisterTool[I any, O any](registry *Registry, name string, description string, handler func(ctx context.Context, input I) (*schema.CallToolResult, *jsonrpc.Error)) error {
 	// Derive input schema from struct type I
 
-	var sample I
+	var inVar I
 	var inputSchema schema.ToolInputSchema
-	sampleType := reflect.TypeOf(sample)
+	sampleType := reflect.TypeOf(inVar)
 	if sampleType.Kind() == reflect.Pointer {
-		if err := inputSchema.Load(sample); err != nil {
+		if err := inputSchema.Load(inVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	} else {
-		if err := inputSchema.Load(&sample); err != nil {
+		if err := inputSchema.Load(&inVar); err != nil {
+			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
+		}
+	}
+
+	var outVar O
+	var outputSchema schema.ToolOutputSchema
+	outputType := reflect.TypeOf(outVar)
+	if outputType.Kind() == reflect.Pointer {
+		if err := outputSchema.Load(inVar); err != nil {
+			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
+		}
+	} else {
+		if err := outputSchema.Load(&inVar); err != nil {
 			return fmt.Errorf("failed to derive input schema for tool %s: %w", name, err)
 		}
 	}
@@ -93,6 +107,6 @@ func RegisterTool[I any](registry *Registry, name string, description string, ha
 		return handler(ctx, input)
 	}
 	// Register with metadata and wrapped handler on this Base
-	registry.RegisterToolWithSchema(name, description, inputSchema, wrapped)
+	registry.RegisterToolWithSchema(name, description, inputSchema, &outputSchema, wrapped)
 	return nil
 }

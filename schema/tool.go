@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -180,6 +181,7 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		if jsonTag == "-" {
 			continue
 		}
+
 		isInternal := field.Tag.Get("internal")
 		if isInternal != "" {
 			continue
@@ -197,6 +199,7 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 				}
 			}
 		}
+
 		if fieldName == "" {
 			fieldName = field.Name
 		}
@@ -211,6 +214,20 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		}
 		if fmtVal != "" {
 			fieldSchema["format"] = fmtVal
+		}
+
+		if desc := field.Tag.Get("description"); desc != "" {
+			fieldSchema["description"] = desc
+		}
+
+		if choice := field.Tag.Get("choice"); choice != "" {
+			re := regexp.MustCompile(`choice:"([^"]+)"`)
+			matches := re.FindAllStringSubmatch(string(field.Tag), -1)
+			var choices []string
+			for _, match := range matches {
+				choices = append(choices, match[1])
+			}
+			fieldSchema["enum"] = choices
 		}
 
 		// Apply nullable override via hook if provided.
@@ -239,6 +256,21 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 }
 
 func (s *ToolInputSchema) Load(v any, options ...StructToPropertiesOption) error {
+	t := reflect.TypeOf(v)
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return fmt.Errorf("expected a struct type, got %s", t.Kind())
+	}
+	properties, required := StructToProperties(t, options...)
+	s.Properties = properties
+	s.Required = required
+	s.Type = "object"
+	return nil
+}
+
+func (s *ToolOutputSchema) Load(v any, options ...StructToPropertiesOption) error {
 	t := reflect.TypeOf(v)
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
