@@ -87,6 +87,13 @@ func (d *DefaultServer) Unsubscribe(ctx context.Context, request *schema.Unsubsc
 func (d *DefaultServer) ListTools(ctx context.Context, request *schema.ListToolsRequest) (*schema.ListToolsResult, *jsonrpc.Error) {
 	// Return the list of registered tools
 	tools := d.ListRegisteredTools()
+	if !schema.IsProtocolNewer(d.ClientInitialize.ProtocolVersion, "2025-03-26") {
+		//needs to clean output schema, it was introduced after version "2025-03-26"
+		for i := range tools {
+			tool := &tools[i]
+			tool.OutputSchema = nil
+		}
+	}
 	return &schema.ListToolsResult{
 		Tools: tools,
 	}, nil
