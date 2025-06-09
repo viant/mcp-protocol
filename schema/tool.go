@@ -247,7 +247,9 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		if isOptional {
 			continue
 		}
-		if field.Type.Kind() != reflect.Ptr && !omitempty {
+		isRequiredValue, isRequired := field.Tag.Lookup("required")
+		isRequired = isRequiredValue == "true" || (isRequiredValue == "" && isRequired)
+		if (field.Type.Kind() != reflect.Ptr && !omitempty) || isRequired {
 			required = append(required, fieldName)
 		}
 	}
