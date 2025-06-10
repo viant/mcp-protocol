@@ -19,6 +19,9 @@ type ToolEntry struct {
 	Metadata schema.Tool
 }
 
+// Tools is a collection of ToolEntry
+type Tools []*ToolEntry
+
 // RegisterToolWithSchema registers a tool with an explicit JSON schema.
 func (d *Registry) RegisterToolWithSchema(name, description string, inputSchema schema.ToolInputSchema, outputSchema *schema.ToolOutputSchema, handler ToolHandlerFunc) {
 	d.RegisterTool(&ToolEntry{
