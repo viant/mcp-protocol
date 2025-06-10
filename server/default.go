@@ -45,7 +45,7 @@ func (d *DefaultHandler) Initialize(ctx context.Context, init *schema.Initialize
 }
 
 // ListResources returns method-not-found by default.
-func (d *DefaultHandler) ListResources(ctx context.Context, request *schema.ListResourcesRequest) (*schema.ListResourcesResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListResources(ctx context.Context, request *jsonrpc.TypedRequest[*schema.ListResourcesRequest]) (*schema.ListResourcesResult, *jsonrpc.Error) {
 	// Return list of registered resources
 	resources := d.ListRegisteredResources()
 	return &schema.ListResourcesResult{
@@ -54,7 +54,7 @@ func (d *DefaultHandler) ListResources(ctx context.Context, request *schema.List
 }
 
 // ListResourceTemplates returns method-not-found by default.
-func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *schema.ListResourceTemplatesRequest) (*schema.ListResourceTemplatesResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *jsonrpc.TypedRequest[*schema.ListResourceTemplatesRequest]) (*schema.ListResourceTemplatesResult, *jsonrpc.Error) {
 	// Return list of registered resource templates
 	templates := d.ListRegisteredResourceTemplates()
 	return &schema.ListResourceTemplatesResult{
@@ -63,7 +63,8 @@ func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *sch
 }
 
 // ReadResource returns method-not-found by default.
-func (d *DefaultHandler) ReadResource(ctx context.Context, request *schema.ReadResourceRequest) (*schema.ReadResourceResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ReadResource(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ReadResourceRequest]) (*schema.ReadResourceResult, *jsonrpc.Error) {
+	request := jRequest.Request
 	// Delegate to registered resource handler
 	handler, ok := d.getResourceHandler(request.Params.Uri)
 	if !ok {
@@ -73,19 +74,22 @@ func (d *DefaultHandler) ReadResource(ctx context.Context, request *schema.ReadR
 }
 
 // Subscribe adds the URI to the subscription map.
-func (d *DefaultHandler) Subscribe(ctx context.Context, request *schema.SubscribeRequest) (*schema.SubscribeResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Subscribe(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.SubscribeRequest]) (*schema.SubscribeResult, *jsonrpc.Error) {
+	request := jRequest.Request
+
 	d.Subscription.Put(request.Params.Uri, true)
 	return &schema.SubscribeResult{}, nil
 }
 
 // Unsubscribe removes the URI from the subscription map.
-func (d *DefaultHandler) Unsubscribe(ctx context.Context, request *schema.UnsubscribeRequest) (*schema.UnsubscribeResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Unsubscribe(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.UnsubscribeRequest]) (*schema.UnsubscribeResult, *jsonrpc.Error) {
+	request := jRequest.Request
 	d.Subscription.Delete(request.Params.Uri)
 	return &schema.UnsubscribeResult{}, nil
 }
 
 // ListTools returns method-not-found by default.
-func (d *DefaultHandler) ListTools(ctx context.Context, request *schema.ListToolsRequest) (*schema.ListToolsResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListTools(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ListToolsRequest]) (*schema.ListToolsResult, *jsonrpc.Error) {
 	// Return the list of registered tools
 	tools := d.ListRegisteredTools()
 	if !schema.IsProtocolNewer(d.ClientInitialize.ProtocolVersion, "2025-03-26") {
@@ -101,8 +105,9 @@ func (d *DefaultHandler) ListTools(ctx context.Context, request *schema.ListTool
 }
 
 // CallTool returns method-not-found by default.
-func (d *DefaultHandler) CallTool(ctx context.Context, request *schema.CallToolRequest) (*schema.CallToolResult, *jsonrpc.Error) {
+func (d *DefaultHandler) CallTool(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.CallToolRequest]) (*schema.CallToolResult, *jsonrpc.Error) {
 	// Delegate to the registered tool handler
+	request := jRequest.Request
 	handler, ok := d.getToolHandler(request.Params.Name)
 	if !ok {
 		return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("tool %v not found", request.Params.Name), nil)
@@ -111,7 +116,8 @@ func (d *DefaultHandler) CallTool(ctx context.Context, request *schema.CallToolR
 }
 
 // Complete returns method-not-found by default.
-func (d *DefaultHandler) Complete(ctx context.Context, request *schema.CompleteRequest) (*schema.CompleteResult, *jsonrpc.Error) {
+func (d *DefaultHandler) Complete(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.CompleteRequest]) (*schema.CompleteResult, *jsonrpc.Error) {
+	request := jRequest.Request
 	return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("method %v not found", request.Method), nil)
 }
 
@@ -120,7 +126,7 @@ func (d *DefaultHandler) OnNotification(ctx context.Context, notification *jsonr
 }
 
 // ListPrompts lists all registered prompts on this DefaultHandler.
-func (d *DefaultHandler) ListPrompts(ctx context.Context, request *schema.ListPromptsRequest) (*schema.ListPromptsResult, *jsonrpc.Error) {
+func (d *DefaultHandler) ListPrompts(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ListPromptsRequest]) (*schema.ListPromptsResult, *jsonrpc.Error) {
 	result := &schema.ListPromptsResult{}
 	for _, entry := range d.Prompts.Values() {
 		result.Prompts = append(result.Prompts, *entry.Prompt)
@@ -129,7 +135,8 @@ func (d *DefaultHandler) ListPrompts(ctx context.Context, request *schema.ListPr
 }
 
 // GetPrompt returns the result of a prompt call.
-func (d *DefaultHandler) GetPrompt(ctx context.Context, request *schema.GetPromptRequest) (*schema.GetPromptResult, *jsonrpc.Error) {
+func (d *DefaultHandler) GetPrompt(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.GetPromptRequest]) (*schema.GetPromptResult, *jsonrpc.Error) {
+	request := jRequest.Request
 	promptEntry, ok := d.Prompts.Get(request.Params.Name)
 	if !ok {
 		return nil, jsonrpc.NewMethodNotFound(
