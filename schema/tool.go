@@ -81,14 +81,21 @@ func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOpt
 		schema["type"] = "number"
 	case reflect.String:
 		schema["type"] = "string"
+	case reflect.Interface:
+		// Unconstrained value – same representation the MCP spec uses.
+		return schema
 	case reflect.Slice, reflect.Array:
 		schema["type"] = "array"
 		// When processing slice items, set inSlice = true.
 		schema["items"] = buildJSONSchema(t.Elem(), true, opts...)
 	case reflect.Map:
 		schema["type"] = "object"
-		// For maps, set additionalProperties based on the element type.
-		schema["additionalProperties"] = buildJSONSchema(t.Elem(), false, opts...)
+		// Open-ended objects when the map value is interface{}.
+		if t.Elem().Kind() == reflect.Interface {
+			schema["additionalProperties"] = true
+		} else {
+			schema["additionalProperties"] = buildJSONSchema(t.Elem(), false, opts...)
+		}
 	case reflect.Struct:
 		// For structs, recursively convert their fields.
 		schema["type"] = "object"

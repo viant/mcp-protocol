@@ -22,7 +22,7 @@ func TestBuildJSONSchema_Cycles(t *testing.T) {
 			typ:  reflect.TypeOf(A{}),
 			expected: map[string]interface{}{
 				"type": "object",
-				"properties": map[string]interface{}{
+				"properties": ToolInputSchemaProperties{
 					"Next": map[string]interface{}{
 						"type":     "object",
 						"nullable": true,
@@ -35,7 +35,7 @@ func TestBuildJSONSchema_Cycles(t *testing.T) {
 			typ:  reflect.TypeOf(B{}),
 			expected: map[string]interface{}{
 				"type": "object",
-				"properties": map[string]interface{}{
+				"properties": ToolInputSchemaProperties{
 					"Others": map[string]interface{}{
 						"type":  "array",
 						"items": map[string]interface{}{"type": "object"},
@@ -49,7 +49,7 @@ func TestBuildJSONSchema_Cycles(t *testing.T) {
 			typ:  reflect.TypeOf(C{}),
 			expected: map[string]interface{}{
 				"type": "object",
-				"properties": map[string]interface{}{
+				"properties": ToolInputSchemaProperties{
 					"M": map[string]interface{}{
 						"type":                 "object",
 						"additionalProperties": map[string]interface{}{"type": "object"},
@@ -64,4 +64,26 @@ func TestBuildJSONSchema_Cycles(t *testing.T) {
 		actual := typeSchema(tc.typ)
 		assert.EqualValues(t, tc.expected, actual, tc.name)
 	}
+}
+
+func TestBuildJSONSchema_Interface(t *testing.T) {
+	type S struct {
+		Any  interface{}
+		Meta map[string]interface{}
+	}
+
+	expected := map[string]interface{}{
+		"type": "object",
+		"properties": ToolInputSchemaProperties{
+			"Any": map[string]interface{}{},
+			"Meta": map[string]interface{}{
+				"type":                 "object",
+				"additionalProperties": true,
+			},
+		},
+		"required": []string{"Any", "Meta"},
+	}
+
+	actual := typeSchema(reflect.TypeOf(S{}))
+	assert.EqualValues(t, expected, actual)
 }
