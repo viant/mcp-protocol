@@ -300,6 +300,25 @@ type CallToolResultContentElem struct {
 
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
+
+	// The size of the raw resource content, in bytes (i.e., before base64 encoding or
+	// any tokenization), if known.
+	//
+	// This can be used by Hosts to display file sizes and estimate context window
+	// usage.
+	Size *int `json:"size,omitempty" yaml:"size,omitempty" mapstructure:"size,omitempty"`
+
+	// Intended for UI and end-user contexts — optimized to be human-readable and
+	// easily understood,
+	// even by those unfamiliar with domain-specific terminology.
+	//
+	// If not provided, the name should be used for display (except for Tool,
+	// where `annotations.title` should be given precedence over using `name`,
+	// if present).
+	Title *string `json:"title,omitempty" yaml:"title,omitempty" mapstructure:"title,omitempty"`
+
+	// The URI of this resource.
+	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
 }
 
 type CallToolResultContentElemResource struct {
@@ -2700,6 +2719,25 @@ type PromptMessageContent struct {
 
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
+
+	// The size of the raw resource content, in bytes (i.e., before base64 encoding or
+	// any tokenization), if known.
+	//
+	// This can be used by Hosts to display file sizes and estimate context window
+	// usage.
+	Size *int `json:"size,omitempty" yaml:"size,omitempty" mapstructure:"size,omitempty"`
+
+	// Intended for UI and end-user contexts — optimized to be human-readable and
+	// easily understood,
+	// even by those unfamiliar with domain-specific terminology.
+	//
+	// If not provided, the name should be used for display (except for Tool,
+	// where `annotations.title` should be given precedence over using `name`,
+	// if present).
+	Title *string `json:"title,omitempty" yaml:"title,omitempty" mapstructure:"title,omitempty"`
+
+	// The URI of this resource.
+	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
 }
 
 type PromptMessageContentResource struct {
