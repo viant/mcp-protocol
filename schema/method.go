@@ -24,5 +24,4 @@ const (
 	MethodRootsList                   = "roots/list"
 	MethodSamplingCreateMessage       = "sampling/createMessage"
 	MethodElicitationCreate           = "elicitation/create"
-	MethodInteractionCreate           = "interaction/create"
 )

@@ -126,10 +126,20 @@ func typeSchema(t reflect.Type, opts ...StructToPropertiesOption) map[string]int
 type StructToPropertiesOption func(*structToPropertiesOptions)
 
 type structToPropertiesOptions struct {
-	SkipFieldHook  func(field reflect.StructField) bool
-	IsRequiredHook func(field reflect.StructField) bool
-	FormatHook     func(field reflect.StructField) string
-	NullableHook   func(field reflect.StructField) *bool
+	SkipFieldHook   func(field reflect.StructField) bool
+	IsRequiredHook  func(field reflect.StructField) bool
+	FormatHook      func(field reflect.StructField) string
+	NullableHook    func(field reflect.StructField) *bool
+	DescriptionHook func(field reflect.StructField) string
+}
+
+// WithDescriptionHook create description hook  option
+func WithDescriptionHook(description string) StructToPropertiesOption {
+	return func(o *structToPropertiesOptions) {
+		o.DescriptionHook = func(field reflect.StructField) string {
+			return description
+		}
+	}
 }
 
 // WithSkipFieldHook returns an option to set a hook for skipping fields based on reflect.StructField.
@@ -225,6 +235,11 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 
 		if desc := field.Tag.Get("description"); desc != "" {
 			fieldSchema["description"] = desc
+		}
+		if opt.DescriptionHook != nil {
+			if desc := opt.DescriptionHook(field); desc != "" {
+				fieldSchema["desc"] = desc
+			}
 		}
 
 		if choice := field.Tag.Get("choice"); choice != "" {

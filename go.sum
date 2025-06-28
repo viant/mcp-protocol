@@ -20,6 +20,8 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/viant/jsonrpc v0.7.2 h1:FUzhfFN76E09ZbQOxReFOyPhsxYhE0fjWzPhattR9Dk=
 github.com/viant/jsonrpc v0.7.2/go.mod h1:LW2l5/H4KkGCsx2ktPX59iUlycw85ZlBcRuK/WYWBX8=
+github.com/viant/jsonrpc v0.7.3 h1:cCyZf5Uqs1B1a0i3Zp8u5Y4Z1N+Td5c7bHko4OJpk7Q=
+github.com/viant/jsonrpc v0.7.3/go.mod h1:LW2l5/H4KkGCsx2ktPX59iUlycw85ZlBcRuK/WYWBX8=
 golang.org/x/oauth2 v0.30.0 h1:dnDm7JmhM45NNpd8FDDeLhK6FwqbOf4MLCM9zb1BOHI=
 golang.org/x/oauth2 v0.30.0/go.mod h1:B++QgG3ZKulg6sRPGD/mqlHQs5rB3Ml9erfeDY7xKlU=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
