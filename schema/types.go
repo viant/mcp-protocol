@@ -280,7 +280,113 @@ type CallToolResult struct {
 	StructuredContent map[string]interface{} `json:"structuredContent,omitempty" yaml:"structuredContent,omitempty" mapstructure:"structuredContent,omitempty"`
 }
 
-type CallToolResultContentElem interface{}
+// Text provided to or from an LLM.
+type CallToolResultContentElem struct {
+	// Optional annotations for the client.
+	Annotations *Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
+	// The base64-encoded image data.
+	Data string `json:"data" yaml:"data" mapstructure:"data"`
+
+	// The MIME type of the image. Different providers may support different image
+	// types.
+	MimeType string `json:"mimeType" yaml:"mimeType" mapstructure:"mimeType"`
+
+	// Resource corresponds to the JSON schema field "resource".
+	Resource CallToolResultContentElemResource `json:"resource" yaml:"resource" mapstructure:"resource"`
+
+	// The text content of the message.
+	Text string `json:"text" yaml:"text" mapstructure:"text"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
+}
+
+type CallToolResultContentElemResource struct {
+	// A base64-encoded string representing the binary data of the item.
+	Blob string `json:"blob" yaml:"blob" mapstructure:"blob"`
+
+	// The MIME type of this resource, if known.
+	MimeType *string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType,omitempty"`
+
+	// The text of the item. This must only be set if the item can actually be
+	// represented as text (not binary data).
+	Text string `json:"text" yaml:"text" mapstructure:"text"`
+
+	// The URI of this resource.
+	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CallToolResultContentElemResource) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	var callToolResultContentElemResource_0 CallToolResultContentElemResource_0
+	var callToolResultContentElemResource_1 CallToolResultContentElemResource_1
+	var errs []error
+	if err := callToolResultContentElemResource_0.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := callToolResultContentElemResource_1.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) == 2 {
+		return fmt.Errorf("all validators failed: %s", errors.Join(errs...))
+	}
+	type Plain CallToolResultContentElemResource
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = CallToolResultContentElemResource(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CallToolResultContentElem) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	var callToolResultContentElem_0 CallToolResultContentElem_0
+	var callToolResultContentElem_1 CallToolResultContentElem_1
+	var callToolResultContentElem_2 CallToolResultContentElem_2
+	var callToolResultContentElem_3 CallToolResultContentElem_3
+	var callToolResultContentElem_4 CallToolResultContentElem_4
+
+	var errs []error
+	if err := callToolResultContentElem_0.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := callToolResultContentElem_1.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := callToolResultContentElem_2.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := callToolResultContentElem_3.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := callToolResultContentElem_4.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) == 5 {
+		return fmt.Errorf("all validators failed: %s", errors.Join(errs...))
+	}
+	type Plain CallToolResultContentElem
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = CallToolResultContentElem(plain)
+	return nil
+}
+
+// This result property is reserved by the protocol to allow clients and servers to
+// attach additional metadata to their responses.
+type CallToolResultMeta map[string]interface{}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolResult) UnmarshalJSON(value []byte) error {
@@ -2574,7 +2680,109 @@ type PromptMessage struct {
 	Role Role `json:"role" yaml:"role" mapstructure:"role"`
 }
 
-type PromptMessageContent interface{}
+// Text provided to or from an LLM.
+type PromptMessageContent struct {
+	// Optional annotations for the client.
+	Annotations *Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
+	// The base64-encoded image data.
+	Data string `json:"data" yaml:"data" mapstructure:"data"`
+
+	// The MIME type of the image. Different providers may support different image
+	// types.
+	MimeType string `json:"mimeType" yaml:"mimeType" mapstructure:"mimeType"`
+
+	// Resource corresponds to the JSON schema field "resource".
+	Resource PromptMessageContentResource `json:"resource" yaml:"resource" mapstructure:"resource"`
+
+	// The text content of the message.
+	Text string `json:"text" yaml:"text" mapstructure:"text"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
+}
+
+type PromptMessageContentResource struct {
+	// A base64-encoded string representing the binary data of the item.
+	Blob string `json:"blob" yaml:"blob" mapstructure:"blob"`
+
+	// The MIME type of this resource, if known.
+	MimeType *string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType,omitempty"`
+
+	// The text of the item. This must only be set if the item can actually be
+	// represented as text (not binary data).
+	Text string `json:"text" yaml:"text" mapstructure:"text"`
+
+	// The URI of this resource.
+	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PromptMessageContentResource) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	var promptMessageContentResource_0 PromptMessageContentResource_0
+	var promptMessageContentResource_1 PromptMessageContentResource_1
+	var errs []error
+	if err := promptMessageContentResource_0.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := promptMessageContentResource_1.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) == 2 {
+		return fmt.Errorf("all validators failed: %s", errors.Join(errs...))
+	}
+	type Plain PromptMessageContentResource
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = PromptMessageContentResource(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PromptMessageContent) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	var promptMessageContent_0 PromptMessageContent_0
+	var promptMessageContent_1 PromptMessageContent_1
+	var promptMessageContent_2 PromptMessageContent_2
+	var promptMessageContent_3 PromptMessageContent_3
+	var promptMessageContent_4 PromptMessageContent_4
+
+	var errs []error
+	if err := promptMessageContent_0.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := promptMessageContent_1.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := promptMessageContent_2.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := promptMessageContent_3.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if err := promptMessageContent_4.UnmarshalJSON(value); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) == 5 {
+		return fmt.Errorf("all validators failed: %s", errors.Join(errs...))
+	}
+	type Plain PromptMessageContent
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = PromptMessageContent(plain)
+	return nil
+}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *PromptMessage) UnmarshalJSON(value []byte) error {
@@ -3765,6 +3973,7 @@ type ToolAnnotations struct {
 }
 
 type EmbeddedResourceResource_0 = TextResourceContents
+type EmbeddedResourceResource_1 = BlobResourceContents
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *ToolOutputSchema) UnmarshalJSON(value []byte) error {
@@ -3862,8 +4071,27 @@ type ToolOutputSchema struct {
 
 type ReadResourceResultContentsElem_1 = BlobResourceContents
 type CreateMessageResultContent_1 = ImageContent
-type EmbeddedResourceResource_1 = BlobResourceContents
+
 type CreateMessageResultContent_2 = AudioContent
+
+type CallToolResultContentElemResource_0 = TextResourceContents
+type CallToolResultContentElemResource_1 = BlobResourceContents
+
+type CallToolResultContentElem_4 = ResourceLink
+type CallToolResultContentElem_3 = EmbeddedResource
+type CallToolResultContentElem_2 = AudioContent
+type CallToolResultContentElem_1 = ImageContent
+type CallToolResultContentElem_0 = TextContent
+
+type PromptMessageContentResource_1 = BlobResourceContents
+type PromptMessageContentResource_0 = TextResourceContents
+
+type PromptMessageContent_4 = ResourceLink
+type PromptMessageContent_3 = EmbeddedResource
+type PromptMessageContent_2 = AudioContent
+type PromptMessageContent_1 = ImageContent
+type PromptMessageContent_0 = TextContent
+
 type ToolListChangedNotificationParams struct {
 	// See [specification/2025-06-18/basic/index#general-fields] for notes on _meta
 	// usage.
