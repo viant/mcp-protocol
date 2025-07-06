@@ -5,7 +5,7 @@ go 1.23.8
 require (
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/stretchr/testify v1.10.0
-	github.com/viant/jsonrpc v0.7.4
+	github.com/viant/jsonrpc v0.7.5
 	golang.org/x/oauth2 v0.30.0
 )
 
