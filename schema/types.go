@@ -989,11 +989,13 @@ type ElicitRequestParams struct {
 
 	// A restricted subset of JSON Schema.
 	// Only top-level properties are allowed, without nesting.
-	RequestedSchema FormElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
+	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
 
 	// The URL that the user should navigate to.
 	Url string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url"`
 }
+
+// A restricted subset of JSON Schema.
 
 type ElicitRequestParamsMode string
 
@@ -1034,19 +1036,6 @@ type URLElicitRequestParamsMeta struct {
 	ProgressToken *ProgressToken `json:"progressToken,omitempty" yaml:"progressToken,omitempty" mapstructure:"progressToken,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
-}
-
-// A restricted subset of JSON Schema.
-// Only top-level properties are allowed, without nesting.
-type FormElicitRequestParamsRequestedSchema struct {
-	// Properties corresponds to the JSON schema field "properties".
-	Properties map[string]interface{} `json:"properties" yaml:"properties" mapstructure:"properties"`
-
-	// Required corresponds to the JSON schema field "required".
-	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
-
-	// Type corresponds to the JSON schema field "type".
-	Type string `json:"type" yaml:"type" mapstructure:"type"`
 }
 
 // A restricted subset of JSON Schema.
