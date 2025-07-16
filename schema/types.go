@@ -512,6 +512,14 @@ type ClientCapabilities struct {
 	Sampling map[string]interface{} `json:"sampling,omitempty" yaml:"sampling,omitempty" mapstructure:"sampling,omitempty"`
 }
 
+type ClientCapabilitiesElicitation_0 struct {
+	// Form corresponds to the JSON schema field "form".
+	Form map[string]interface{} `json:"form,omitempty" yaml:"form" mapstructure:"form"`
+
+	// Url corresponds to the JSON schema field "url".
+	Url map[string]interface{} `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url,omitempty"`
+}
+
 // Present if the client supports listing roots.
 type ClientCapabilitiesRoots struct {
 	// Whether the client supports notifications for changes to the roots list.
@@ -963,12 +971,82 @@ type ElicitRequest struct {
 }
 
 type ElicitRequestParams struct {
+	// See [specification/draft/basic/index#general-fields] for notes on _meta usage.
+	Meta *URLElicitRequestParamsMeta `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
+
+	// The ID of the elicitation, which must be unique within the context of the
+	// server.
+	// The client MUST treat this ID as an opaque value.
+	ElicitationId string `json:"elicitationId" yaml:"elicitationId" mapstructure:"elicitationId"`
+
 	// The message to present to the user.
+	// For form mode: Describes what information is being requested.
+	// For url mode: Explains why the interaction is needed.
 	Message string `json:"message" yaml:"message" mapstructure:"message"`
+
+	// The elicitation mode.
+	Mode string `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode"`
 
 	// A restricted subset of JSON Schema.
 	// Only top-level properties are allowed, without nesting.
-	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
+	RequestedSchema FormElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
+
+	// The URL that the user should navigate to.
+	Url string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url"`
+}
+
+type ElicitRequestParamsMode string
+
+const ElicitRequestParamsModeForm ElicitRequestParamsMode = "form"
+const ElicitRequestParamsModeUrl ElicitRequestParamsMode = "url"
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ElicitRequestParamsMode) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ElicitRequestParamsMode {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ElicitRequestParamsMode, v)
+	}
+	*j = ElicitRequestParamsMode(v)
+	return nil
+}
+
+var enumValues_ElicitRequestParamsMode = []interface{}{
+	"form",
+	"url",
+}
+
+// See [specification/draft/basic/index#general-fields] for notes on _meta usage.
+type URLElicitRequestParamsMeta struct {
+	// If specified, the caller is requesting out-of-band progress notifications for
+	// this request (as represented by notifications/progress). The value of this
+	// parameter is an opaque token that will be attached to any subsequent
+	// notifications. The receiver is not obligated to provide these notifications.
+	ProgressToken *ProgressToken `json:"progressToken,omitempty" yaml:"progressToken,omitempty" mapstructure:"progressToken,omitempty"`
+
+	AdditionalProperties interface{} `mapstructure:",remain"`
+}
+
+// A restricted subset of JSON Schema.
+// Only top-level properties are allowed, without nesting.
+type FormElicitRequestParamsRequestedSchema struct {
+	// Properties corresponds to the JSON schema field "properties".
+	Properties map[string]interface{} `json:"properties" yaml:"properties" mapstructure:"properties"`
+
+	// Required corresponds to the JSON schema field "required".
+	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
 }
 
 // A restricted subset of JSON Schema.
