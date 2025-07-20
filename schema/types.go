@@ -989,7 +989,7 @@ type ElicitRequestParams struct {
 
 	// A restricted subset of JSON Schema.
 	// Only top-level properties are allowed, without nesting.
-	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema" yaml:"requestedSchema" mapstructure:"requestedSchema"`
+	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema,omitempty" yaml:"requestedSchema" mapstructure:"requestedSchema"`
 
 	// The URL that the user should navigate to.
 	Url string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url"`
