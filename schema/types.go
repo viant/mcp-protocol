@@ -500,16 +500,16 @@ func (j *CancelledNotification) UnmarshalJSON(value []byte) error {
 // capabilities.
 type ClientCapabilities struct {
 	// Present if the client supports elicitation from the server.
-	Elicitation map[string]interface{} `json:"elicitation,omitempty" yaml:"elicitation,omitempty" mapstructure:"elicitation,omitempty"`
+	Elicitation map[string]interface{} `json:"elicitation" yaml:"elicitation" mapstructure:"elicitation,omitempty"`
 
 	// Experimental, non-standard capabilities that the client supports.
-	Experimental map[string]map[string]interface{} `json:"experimental,omitempty" yaml:"experimental,omitempty" mapstructure:"experimental,omitempty"`
+	Experimental map[string]map[string]interface{} `json:"experimental" yaml:"experimental,omitempty" mapstructure:"experimental,omitempty"`
 
 	// Present if the client supports listing roots.
-	Roots *ClientCapabilitiesRoots `json:"roots,omitempty" yaml:"roots,omitempty" mapstructure:"roots,omitempty"`
+	Roots *ClientCapabilitiesRoots `json:"roots" yaml:"roots" mapstructure:"roots,omitempty"`
 
 	// Present if the client supports sampling from an LLM.
-	Sampling map[string]interface{} `json:"sampling,omitempty" yaml:"sampling,omitempty" mapstructure:"sampling,omitempty"`
+	Sampling map[string]interface{} `json:"sampling" yaml:"sampling" mapstructure:"sampling,omitempty"`
 }
 
 type ClientCapabilitiesElicitation_0 struct {
