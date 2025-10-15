@@ -1195,7 +1195,7 @@ type EmbeddedResourceResource struct {
 	Meta map[string]interface{} `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
 
 	// A base64-encoded string representing the binary data of the item.
-	Blob string `json:"blob" yaml:"blob" mapstructure:"blob"`
+	Blob string `json:"blob,omitempty" yaml:"blob" mapstructure:"blob"`
 
 	// The MIME type of this resource, if known.
 	MimeType *string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType,omitempty"`
@@ -2916,17 +2916,17 @@ type ReadResourceResultContentsElem struct {
 	Meta map[string]interface{} `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
 
 	// A base64-encoded string representing the binary data of the item.
-	Blob string `json:"blob" yaml:"blob" mapstructure:"blob"`
+	Blob string `json:"blob,omitempty" yaml:"blob" mapstructure:"blob"`
 
 	// The MIME type of this resource, if known.
 	MimeType *string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType,omitempty"`
 
 	// The text of the item. This must only be set if the item can actually be
 	// represented as text (not binary data).
-	Text string `json:"text" yaml:"text" mapstructure:"text"`
+	Text string `json:"text,omitempty" yaml:"text" mapstructure:"text"`
 
 	// The URI of this resource.
-	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
+	Uri string `json:"uri,omitempty" yaml:"uri" mapstructure:"uri"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
