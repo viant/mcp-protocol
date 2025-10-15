@@ -286,17 +286,17 @@ type CallToolResultContentElem struct {
 	Annotations *Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
 
 	// The base64-encoded image data.
-	Data string `json:"data" yaml:"data" mapstructure:"data"`
+	Data string `json:"data,omitempty" yaml:"data,omitempty" mapstructure:"data"`
 
 	// The MIME type of the image. Different providers may support different image
 	// types.
-	MimeType string `json:"mimeType" yaml:"mimeType" mapstructure:"mimeType"`
+	MimeType string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType"`
 
 	// Resource corresponds to the JSON schema field "resource".
-	Resource CallToolResultContentElemResource `json:"resource" yaml:"resource" mapstructure:"resource"`
+	Resource *CallToolResultContentElemResource `json:"resource,omitempty" yaml:"resource" mapstructure:"resource"`
 
 	// The text content of the message.
-	Text string `json:"text" yaml:"text" mapstructure:"text"`
+	Text string `json:"text,omitempty" yaml:"text,omitempty" mapstructure:"text"`
 
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
@@ -318,22 +318,22 @@ type CallToolResultContentElem struct {
 	Title *string `json:"title,omitempty" yaml:"title,omitempty" mapstructure:"title,omitempty"`
 
 	// The URI of this resource.
-	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
+	Uri string `json:"uri,omitempty" yaml:"uri,omitempty" mapstructure:"uri"`
 }
 
 type CallToolResultContentElemResource struct {
 	// A base64-encoded string representing the binary data of the item.
-	Blob string `json:"blob" yaml:"blob" mapstructure:"blob"`
+	Blob string `json:"blob,omitempty" yaml:"blob" mapstructure:"blob"`
 
 	// The MIME type of this resource, if known.
 	MimeType *string `json:"mimeType,omitempty" yaml:"mimeType,omitempty" mapstructure:"mimeType,omitempty"`
 
 	// The text of the item. This must only be set if the item can actually be
 	// represented as text (not binary data).
-	Text string `json:"text" yaml:"text" mapstructure:"text"`
+	Text string `json:"text,omitempty" yaml:"text,omitempty" mapstructure:"text"`
 
 	// The URI of this resource.
-	Uri string `json:"uri" yaml:"uri" mapstructure:"uri"`
+	Uri string `json:"uri,omitempty" yaml:"uri,omitempty" mapstructure:"uri"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
