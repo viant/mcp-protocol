@@ -205,14 +205,18 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		}
 		var fieldName string
 		var omitempty bool
+		var inline bool
 		if jsonTag != "" {
 			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "" {
+			if len(parts) > 0 && parts[0] != "" {
 				fieldName = parts[0]
 			}
 			for _, opt := range parts[1:] {
-				if opt == "omitempty" {
+				switch opt {
+				case "omitempty":
 					omitempty = true
+				case "inline":
+					inline = true
 				}
 			}
 		}
@@ -220,6 +224,38 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		if fieldName == "" {
 			fieldName = field.Name
 		}
+
+		// If the field is marked inline and is a struct (or pointer to struct),
+		// merge its properties into the parent instead of creating a nested object.
+		if inline || (field.Anonymous && fieldName == field.Name && (field.Type.Kind() == reflect.Struct || (field.Type.Kind() == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct))) {
+			// Determine underlying struct type for the embedded field.
+			embeddedType := field.Type
+			isPtr := false
+			if embeddedType.Kind() == reflect.Ptr {
+				isPtr = true
+				embeddedType = embeddedType.Elem()
+			}
+			// Only inline struct types.
+			if embeddedType.Kind() == reflect.Struct {
+				childProps, childReq := StructToProperties(embeddedType, opts...)
+				// Merge child properties into parent, without overwriting existing keys.
+				for k, v := range childProps {
+					if _, exists := properties[k]; !exists {
+						properties[k] = v
+					}
+				}
+				// Propagate requireds only if this embedded field itself is required
+				// (i.e., not a pointer, not omitempty, and not explicitly optional).
+				tag := string(field.Tag)
+				isOptional := strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
+				if !isPtr && !omitempty && !isOptional {
+					required = append(required, childReq...)
+				}
+				// Done handling this field.
+				continue
+			}
+		}
+
 		// Generate the field's JSON schema.
 		fieldSchema := typeSchema(field.Type, opts...)
 		// Determine format via hook or tag.
@@ -250,6 +286,23 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 				choices = append(choices, match[1])
 			}
 			fieldSchema["enum"] = choices
+		}
+
+		// Handle default values for primitive types via `default:"..."` tag.
+		if def := field.Tag.Get("default"); def != "" {
+			switch field.Type.Kind() {
+			case reflect.String:
+				fieldSchema["default"] = def
+			case reflect.Bool:
+				if def == "true" || def == "false" {
+					fieldSchema["default"] = (def == "true")
+				}
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+				reflect.Float32, reflect.Float64:
+				// Keep as string; schema is typeless at this layer
+				fieldSchema["default"] = def
+			}
 		}
 
 		// Apply nullable override via hook if provided.
