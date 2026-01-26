@@ -1178,45 +1178,6 @@ type ElicitRequest struct {
 
 type ElicitRequestElicitRequestParamsInline interface{}
 
-// Legacy params for elicitation requests (backward-compat).
-type ElicitRequestParams struct {
-	// See [General fields: `_meta`](/specification/2025-11-25/basic/index#meta) for
-	// notes on `_meta` usage.
-	Meta *URLElicitRequestParamsMeta `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
-
-	// The ID of the elicitation, which must be unique within the context of the
-	// server.
-	// The client MUST treat this ID as an opaque value.
-	ElicitationId string `json:"elicitationId" yaml:"elicitationId" mapstructure:"elicitationId"`
-
-	// The message to present to the user.
-	// For form mode: Describes what information is being requested.
-	// For url mode: Explains why the interaction is needed.
-	Message string `json:"message" yaml:"message" mapstructure:"message"`
-
-	// The elicitation mode.
-	Mode string `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
-
-	// A restricted subset of JSON Schema.
-	// Only top-level properties are allowed, without nesting.
-	RequestedSchema ElicitRequestParamsRequestedSchema `json:"requestedSchema,omitempty" yaml:"requestedSchema,omitempty" mapstructure:"requestedSchema,omitempty"`
-
-	// The URL that the user should navigate to.
-	Url string `json:"url,omitempty" yaml:"url,omitempty" mapstructure:"url,omitempty"`
-}
-
-// Legacy mode enum for elicitation requests.
-type ElicitRequestParamsMode string
-
-const ElicitRequestParamsModeForm ElicitRequestParamsMode = "form"
-const ElicitRequestParamsModeUrl ElicitRequestParamsMode = "url"
-
-// Backward-compat alias for legacy requested schema.
-type ElicitRequestParamsRequestedSchema = ElicitRequestFormParamsRequestedSchema
-
-// Backward-compat alias for legacy meta name.
-type URLElicitRequestParamsMeta = ElicitRequestURLParamsMeta
-
 // The parameters for a request to elicit non-sensitive information from the user
 // via a form in the client.
 type ElicitRequestFormParams struct {
@@ -1316,6 +1277,10 @@ func (j *ElicitRequestFormParams) UnmarshalJSON(value []byte) error {
 	*j = ElicitRequestFormParams(plain)
 	return nil
 }
+
+// The parameters for a request to elicit additional information from the user via
+// the client.
+type ElicitRequestParams interface{}
 
 // The parameters for a request to elicit information from the user via a URL in
 // the client.
@@ -2127,10 +2092,6 @@ func (j *Implementation) UnmarshalJSON(value []byte) error {
 	}
 	*j = Implementation(plain)
 	return nil
-}
-
-func NewImplementation(name string, version string) *Implementation {
-	return &Implementation{Name: name, Version: version}
 }
 
 // This request is sent from the client to the server when it first connects,
@@ -3857,14 +3818,6 @@ type RequestParams struct {
 	Meta *RequestParamsMeta `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
 }
 
-// Backward-compat aliases for legacy request param names.
-type PingRequestParams = RequestParams
-type ListRootsRequestParams = RequestParams
-type ListResourcesRequestParams = PaginatedRequestParams
-type ListResourceTemplatesRequestParams = PaginatedRequestParams
-type ListPromptsRequestParams = PaginatedRequestParams
-type ListToolsRequestParams = PaginatedRequestParams
-
 // See [General fields: `_meta`](/specification/2025-11-25/basic/index#meta) for
 // notes on `_meta` usage.
 type RequestParamsMeta struct {
@@ -5333,9 +5286,6 @@ type ToolInputSchema struct {
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
 }
-
-// ToolInputSchemaProperties represents the properties map for a tool input schema.
-type ToolInputSchemaProperties map[string]map[string]interface{}
 
 // Execution-related properties for a tool.
 type ToolExecution struct {

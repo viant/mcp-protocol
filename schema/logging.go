@@ -5,7 +5,7 @@ const (
 	Info      LoggingLevel = "info"
 	Notice    LoggingLevel = "notice"
 	Warning   LoggingLevel = "warning"
-	Error     LoggingLevel = "error"
+	Err       LoggingLevel = "error"
 	Critical  LoggingLevel = "critical"
 	Alert     LoggingLevel = "alert"
 	Emergency LoggingLevel = "emergency"
@@ -22,7 +22,7 @@ func (d LoggingLevel) Ordinal() int {
 		return 2
 	case Warning:
 		return 3
-	case Error:
+	case Err:
 		return 4
 	case Critical:
 		return 5
