@@ -846,10 +846,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "ElicitRequestParams"
-          },
-          "title": "ElicitRequestParams",
           "$ref": "#/$defs/ElicitRequestParams"
         }
       },
@@ -1577,10 +1573,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "NotificationParamsInline"
-          },
-          "title": "NotificationParamsInline",
           "additionalProperties": {},
           "type": "object"
         }
@@ -1699,10 +1691,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -1752,10 +1740,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -1805,10 +1789,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -1858,10 +1838,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "RequestParamsInline"
-          },
-          "title": "RequestParamsInline",
           "$ref": "#/$defs/RequestParams"
         }
       },
@@ -1907,10 +1883,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -1960,10 +1932,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -2117,10 +2085,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "RequestParamsInline"
-          },
-          "title": "RequestParamsInline",
           "additionalProperties": {},
           "type": "object"
         }
@@ -2183,10 +2147,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "PaginatedRequestParamsInline"
-          },
-          "title": "PaginatedRequestParamsInline",
           "$ref": "#/$defs/PaginatedRequestParams"
         }
       },
@@ -2247,10 +2207,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "RequestParamsInline"
-          },
-          "title": "RequestParamsInline",
           "$ref": "#/$defs/RequestParams"
         }
       },
@@ -2571,10 +2527,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "RequestParamsInline"
-          },
-          "title": "RequestParamsInline",
           "additionalProperties": {},
           "type": "object"
         }
@@ -3462,10 +3414,6 @@
           "type": "string"
         },
         "params": {
-          "goJSONSchema": {
-            "identifier": "TaskStatusNotificationParamsInline"
-          },
-          "title": "TaskStatusNotificationParamsInline",
           "$ref": "#/$defs/TaskStatusNotificationParams"
         }
       },

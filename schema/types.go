@@ -1172,11 +1172,11 @@ type ElicitRequest struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// ElicitRequestParamsInline corresponds to the JSON schema field "params".
-	ElicitRequestParamsInline ElicitRequestElicitRequestParamsInline `json:"params" yaml:"params" mapstructure:"params"`
+	// ElicitRequestParams corresponds to the JSON schema field "params".
+	ElicitRequestParams ElicitRequestParams `json:"params" yaml:"params" mapstructure:"params"`
 }
 
-type ElicitRequestElicitRequestParamsInline interface{}
+type ElicitRequestElicitRequestParams interface{}
 
 // Legacy params for elicitation requests (backward-compat).
 type ElicitRequestParams struct {
@@ -1195,7 +1195,7 @@ type ElicitRequestParams struct {
 	Message string `json:"message" yaml:"message" mapstructure:"message"`
 
 	// The elicitation mode.
-	Mode string `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
+	Mode ElicitRequestParamsMode `json:"mode,omitempty" yaml:"mode,omitempty" mapstructure:"mode,omitempty"`
 
 	// A restricted subset of JSON Schema.
 	// Only top-level properties are allowed, without nesting.
@@ -2358,8 +2358,8 @@ type JSONRPCNotification struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// NotificationParamsInline corresponds to the JSON schema field "params".
-	NotificationParamsInline map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
+	// NotificationParams corresponds to the JSON schema field "params".
+	NotificationParams map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2517,8 +2517,8 @@ type ListPromptsRequest struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// PaginatedRequestParamsInline corresponds to the JSON schema field "params".
-	PaginatedRequestParamsInline *PaginatedRequestParams `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
+	// PaginatedRequestParams corresponds to the JSON schema field "params".
+	PaginatedRequestParams *PaginatedRequestParams `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2589,8 +2589,8 @@ type ListResourceTemplatesRequest struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// PaginatedRequestParamsInline corresponds to the JSON schema field "params".
-	PaginatedRequestParamsInline *PaginatedRequestParams `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
+	// PaginatedRequestParams corresponds to the JSON schema field "params".
+	PaginatedRequestParams *PaginatedRequestParams `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -3155,8 +3155,8 @@ type Notification struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// RequestParamsInline corresponds to the JSON schema field "params".
-	RequestParamsInline map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
+	// RequestParams corresponds to the JSON schema field "params".
+	RequestParams map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
 
 type NotificationParams struct {
@@ -3843,8 +3843,8 @@ type Request struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// RequestParamsInline corresponds to the JSON schema field "params".
-	RequestParamsInline map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
+	// RequestParams corresponds to the JSON schema field "params".
+	RequestParams map[string]interface{} `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
 
 // A uniquely identifying ID for a request in JSON-RPC.
@@ -4979,15 +4979,15 @@ type TaskStatusNotification struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// TaskStatusNotificationParamsInline corresponds to the JSON schema field
+	// TaskStatusNotificationParams corresponds to the JSON schema field
 	// "params".
-	TaskStatusNotificationParamsInline TaskStatusNotificationTaskStatusNotificationParamsInline `json:"params" yaml:"params" mapstructure:"params"`
+	TaskStatusNotificationParams TaskStatusNotificationTaskStatusNotificationParams `json:"params" yaml:"params" mapstructure:"params"`
 }
 
 // Parameters for a `notifications/tasks/status` notification.
 type TaskStatusNotificationParams interface{}
 
-type TaskStatusNotificationTaskStatusNotificationParamsInline interface{}
+type TaskStatusNotificationTaskStatusNotificationParams interface{}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *TaskStatusNotification) UnmarshalJSON(value []byte) error {
