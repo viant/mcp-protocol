@@ -887,10 +887,10 @@ func (j *ElicitRequestParams) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	if _, ok := raw["message"]; raw != nil && !ok {
-		return fmt.Errorf("field message in ElicitRequestParams: required")
+		return fmt.Errorf("field message in Params: required")
 	}
 	if _, ok := raw["requestedSchema"]; raw != nil && !ok {
-		return fmt.Errorf("field requestedSchema in ElicitRequestParams: required")
+		return fmt.Errorf("field requestedSchema in Params: required")
 	}
 	type Plain ElicitRequestParams
 	var plain Plain

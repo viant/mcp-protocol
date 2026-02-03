@@ -1172,8 +1172,8 @@ type ElicitRequest struct {
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
-	// ElicitRequestParams corresponds to the JSON schema field "params".
-	ElicitRequestParams ElicitRequestParams `json:"params" yaml:"params" mapstructure:"params"`
+	// Params corresponds to the JSON schema field "params".
+	Params ElicitRequestParams `json:"params" yaml:"params" mapstructure:"params"`
 }
 
 type ElicitRequestElicitRequestParams interface{}
