@@ -166,13 +166,17 @@ func (d *DefaultHandler) Implements(method string) bool {
 // NewDefaultHandler creates a new DefaultHandler with initialized registries.
 // You can then call RegisterResource, RegisterTool, etc., on it before running the server.
 func NewDefaultHandler(notifier transport.Notifier, logger logger.Logger, client client.Operations) *DefaultHandler {
-	return &DefaultHandler{
+	ret := &DefaultHandler{
 		Notifier:     notifier,
 		Logger:       logger,
 		Client:       client,
 		Subscription: syncmap.NewMap[string, bool](),
 		Registry:     NewRegistry(),
 	}
+	// List resource templates is safe to expose by default and returns an empty list
+	// when no templates are registered.
+	ret.Methods.Put(schema.MethodResourcesTemplatesList, true)
+	return ret
 }
 
 func WithDefaultHandler(ctx context.Context, options ...Option) NewHandler {
