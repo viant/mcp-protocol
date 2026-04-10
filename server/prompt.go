@@ -21,5 +21,6 @@ type Prompts []*PromptEntry
 // RegisterPrompts registers a prompt on this handler.
 func (d *Registry) RegisterPrompts(prompt *schema.Prompt, handler PromptHandlerFunc) {
 	d.Methods.Put(schema.MethodPromptsList, true)
+	d.Methods.Put(schema.MethodPromptsGet, true)
 	d.Prompts.Put(prompt.Name, &PromptEntry{Prompt: prompt, Handler: handler})
 }
