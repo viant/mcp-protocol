@@ -277,6 +277,9 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 				fieldSchema["desc"] = desc
 			}
 		}
+		if example, ok := parseFieldExample(field); ok {
+			fieldSchema["example"] = example
+		}
 
 		if choice := field.Tag.Get("choice"); choice != "" {
 			re := regexp.MustCompile(`choice:"([^"]+)"`)
@@ -330,6 +333,18 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 	}
 
 	return properties, required
+}
+
+func parseFieldExample(field reflect.StructField) (interface{}, bool) {
+	raw := strings.TrimSpace(field.Tag.Get("example"))
+	if raw == "" {
+		return nil, false
+	}
+	var parsed interface{}
+	if err := json.Unmarshal([]byte(raw), &parsed); err == nil {
+		return parsed, true
+	}
+	return raw, true
 }
 
 func (s *ToolInputSchema) Load(v any, options ...StructToPropertiesOption) error {

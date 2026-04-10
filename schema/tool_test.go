@@ -120,6 +120,41 @@ func TestStructToProperties_FieldMetadata(t *testing.T) {
 	}
 }
 
+func TestStructToProperties_FieldExample(t *testing.T) {
+	type S struct {
+		Query map[string]interface{} `json:"query,omitempty" example:"{\"id\":null,\"filter\":{\"@type\":\"string\",\"filter\":\"\"}}"`
+		Tags  []string               `json:"tags,omitempty" example:"[\"CONNECTED_TV\",\"VIDEO\"]"`
+		Name  string                 `json:"name,omitempty" example:"IRIS_SEGMENTS"`
+	}
+	props, _ := StructToProperties(reflect.TypeOf(S{}))
+
+	query := prop(props, "query")
+	if query == nil {
+		t.Fatalf("missing query prop")
+	}
+	example, ok := query["example"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected object example, got: %#v", query["example"])
+	}
+	if example["id"] != nil {
+		t.Fatalf("expected null id, got: %#v", example["id"])
+	}
+
+	tags := prop(props, "tags")
+	if tags == nil {
+		t.Fatalf("missing tags prop")
+	}
+	tagExample, ok := tags["example"].([]interface{})
+	if !ok || len(tagExample) != 2 || tagExample[0] != "CONNECTED_TV" {
+		t.Fatalf("unexpected tags example: %#v", tags["example"])
+	}
+
+	name := prop(props, "name")
+	if name == nil || name["example"] != "IRIS_SEGMENTS" {
+		t.Fatalf("unexpected name example: %#v", name)
+	}
+}
+
 // Test: required vs omitempty and explicit required tags.
 func TestStructToProperties_RequiredLogic(t *testing.T) {
 	type S struct {
