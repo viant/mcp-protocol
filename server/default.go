@@ -28,21 +28,27 @@ type DefaultHandler struct {
 func (d *DefaultHandler) Initialize(ctx context.Context, init *schema.InitializeRequestParams, result *schema.InitializeResult) {
 	d.ClientInitialize = init
 	d.Client.Init(ctx, &d.ClientInitialize.Capabilities)
+	d.populateCapabilities(&result.Capabilities)
+}
+
+// Discover populates July server capabilities without retaining client state.
+func (d *DefaultHandler) Discover(_ context.Context, result *schema.DiscoverResult) {
+	d.populateCapabilities(&result.Capabilities)
+}
+
+func (d *DefaultHandler) populateCapabilities(capabilities *schema.ServerCapabilities) {
 	if d.ServerCapabilities != nil {
-		result.Capabilities = *d.ServerCapabilities
+		*capabilities = *d.ServerCapabilities
 	}
 	if d.ToolRegistry.Size() > 0 {
-		result.Capabilities.Tools = &schema.ServerCapabilitiesTools{}
+		capabilities.Tools = &schema.ServerCapabilitiesTools{}
 	}
 	if d.ResourceRegistry.Size() > 0 {
-		result.Capabilities.Resources = &schema.ServerCapabilitiesResources{}
+		capabilities.Resources = &schema.ServerCapabilitiesResources{}
 	}
 	if d.Prompts.Size() > 0 {
-		result.Capabilities.Prompts = &schema.ServerCapabilitiesPrompts{}
+		capabilities.Prompts = &schema.ServerCapabilitiesPrompts{}
 	}
-
-	d.Client.Init(ctx, &d.ClientInitialize.Capabilities)
-
 }
 
 // ListResources returns method-not-found by default.
@@ -93,10 +99,14 @@ func (d *DefaultHandler) Unsubscribe(ctx context.Context, jRequest *jsonrpc.Type
 func (d *DefaultHandler) ListTools(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ListToolsRequest]) (*schema.ListToolsResult, *jsonrpc.Error) {
 	// Return the list of registered tools
 	tools := d.ListRegisteredTools()
-	if d.ClientInitialize == nil {
+	protocolVersion := jRequest.Request.Params.Meta.IoModelcontextprotocolProtocolVersion
+	if protocolVersion == "" && d.ClientInitialize != nil {
+		protocolVersion = d.ClientInitialize.ProtocolVersion
+	}
+	if protocolVersion == "" {
 		return nil, &jsonrpc.Error{Code: jsonrpc.InternalError, Message: "uninilalized"}
 	}
-	if !schema.IsProtocolNewer(d.ClientInitialize.ProtocolVersion, "2025-03-26") {
+	if !schema.IsProtocolNewer(protocolVersion, "2025-03-26") {
 		//needs to clean output schema, it was introduced after version "2025-03-26"
 		for i := range tools {
 			tool := &tools[i]

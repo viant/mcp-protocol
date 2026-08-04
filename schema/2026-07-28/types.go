@@ -381,12 +381,6 @@ type CallToolResult struct {
 	// call.
 	Content []CallToolResultContentElem `json:"content" yaml:"content" mapstructure:"content"`
 
-	// InputRequests and RequestState are populated when ResultType is
-	// "input_required". They mirror the July response union while preserving
-	// the historical CallToolResult API.
-	InputRequests map[string]interface{} `json:"inputRequests,omitempty" yaml:"inputRequests,omitempty" mapstructure:"inputRequests,omitempty"`
-	RequestState  *string                `json:"requestState,omitempty" yaml:"requestState,omitempty" mapstructure:"requestState,omitempty"`
-
 	// Whether the tool call ended in an error.
 	//
 	// If not set, this is assumed to be false (the call was successful).
@@ -538,13 +532,8 @@ func (j *CallToolResult) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
-	resultType, _ := raw["resultType"].(string)
-	if resultType != ResultTypeInputRequired {
-		if _, ok := raw["content"]; raw != nil && !ok {
-			return fmt.Errorf("field content in CallToolResult: required")
-		}
-	} else if _, hasInputs := raw["inputRequests"]; !hasInputs && raw["requestState"] == nil {
-		return fmt.Errorf("input_required CallToolResult requires inputRequests or requestState")
+	if _, ok := raw["content"]; raw != nil && !ok {
+		return fmt.Errorf("field content in CallToolResult: required")
 	}
 	if _, ok := raw["resultType"]; raw != nil && !ok {
 		return fmt.Errorf("field resultType in CallToolResult: required")
@@ -595,7 +584,7 @@ type CancelledNotificationParams struct {
 	// The ID of the request to cancel.
 	//
 	// This MUST correspond to the ID of a request the client previously issued.
-	RequestId *RequestId `json:"requestId,omitempty" yaml:"requestId,omitempty" mapstructure:"requestId,omitempty"`
+	RequestId RequestId `json:"requestId" yaml:"requestId" mapstructure:"requestId"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -661,14 +650,10 @@ type ClientCapabilities struct {
 	Extensions map[string]map[string]interface{} `json:"extensions,omitempty" yaml:"extensions,omitempty" mapstructure:"extensions,omitempty"`
 
 	// Present if the client supports listing roots.
-	Roots *ClientCapabilitiesRoots `json:"roots,omitempty" yaml:"roots,omitempty" mapstructure:"roots,omitempty"`
+	Roots map[string]interface{} `json:"roots,omitempty" yaml:"roots,omitempty" mapstructure:"roots,omitempty"`
 
 	// Present if the client supports sampling from an LLM.
 	Sampling *ClientCapabilitiesSampling `json:"sampling,omitempty" yaml:"sampling,omitempty" mapstructure:"sampling,omitempty"`
-
-	// Tasks is retained for negotiated 2025-11-25 compatibility. July tasks are
-	// negotiated through Extensions instead.
-	Tasks *ClientCapabilitiesTasks `json:"tasks,omitempty" yaml:"tasks,omitempty" mapstructure:"tasks,omitempty"`
 }
 
 // Present if the client supports elicitation from the server.
@@ -1534,11 +1519,6 @@ func (j *DiscoverResult) UnmarshalJSON(value []byte) error {
 // A request from the server to elicit additional information from the user via the
 // client.
 type ElicitRequest struct {
-	// Id and Jsonrpc preserve the pre-July root API. July transports may carry
-	// these in their JSON-RPC envelope.
-	Id      RequestId `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
-	Jsonrpc string    `json:"jsonrpc,omitempty" yaml:"jsonrpc,omitempty" mapstructure:"jsonrpc,omitempty"`
-
 	// Method corresponds to the JSON schema field "method".
 	Method string `json:"method" yaml:"method" mapstructure:"method"`
 
@@ -1619,7 +1599,7 @@ func (j *ElicitRequestFormParams) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
-type ElicitRequestParamsUnion interface{}
+type ElicitRequestParams interface{}
 
 // The parameters for a request to elicit additional information from the user via
 // the client.
@@ -1959,9 +1939,6 @@ type GetPromptResult struct {
 	// An optional description for the prompt.
 	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
 
-	InputRequests map[string]interface{} `json:"inputRequests,omitempty" yaml:"inputRequests,omitempty" mapstructure:"inputRequests,omitempty"`
-	RequestState  *string                `json:"requestState,omitempty" yaml:"requestState,omitempty" mapstructure:"requestState,omitempty"`
-
 	// Messages corresponds to the JSON schema field "messages".
 	Messages []PromptMessage `json:"messages" yaml:"messages" mapstructure:"messages"`
 
@@ -2076,13 +2053,8 @@ func (j *GetPromptResult) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
-	resultType, _ := raw["resultType"].(string)
-	if resultType != ResultTypeInputRequired {
-		if _, ok := raw["messages"]; raw != nil && !ok {
-			return fmt.Errorf("field messages in GetPromptResult: required")
-		}
-	} else if _, hasInputs := raw["inputRequests"]; !hasInputs && raw["requestState"] == nil {
-		return fmt.Errorf("input_required GetPromptResult requires inputRequests or requestState")
+	if _, ok := raw["messages"]; raw != nil && !ok {
+		return fmt.Errorf("field messages in GetPromptResult: required")
 	}
 	if _, ok := raw["resultType"]; raw != nil && !ok {
 		return fmt.Errorf("field resultType in GetPromptResult: required")
@@ -2774,10 +2746,6 @@ type ListPromptsRequest struct {
 
 	// Params corresponds to the JSON schema field "params".
 	Params PaginatedRequestParams `json:"params" yaml:"params" mapstructure:"params"`
-
-	// PaginatedRequestParams preserves the pre-July Go field name. Params is the
-	// canonical July field and both are synchronized while decoding.
-	PaginatedRequestParams *PaginatedRequestParams `json:"-" yaml:"-" mapstructure:"-"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2803,7 +2771,6 @@ func (j *ListPromptsRequest) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &plain); err != nil {
 		return err
 	}
-	plain.PaginatedRequestParams = &plain.Params
 	*j = ListPromptsRequest(plain)
 	return nil
 }
@@ -2964,10 +2931,6 @@ type ListResourceTemplatesRequest struct {
 
 	// Params corresponds to the JSON schema field "params".
 	Params PaginatedRequestParams `json:"params" yaml:"params" mapstructure:"params"`
-
-	// PaginatedRequestParams preserves the pre-July Go field name. Params is the
-	// canonical July field and both are synchronized while decoding.
-	PaginatedRequestParams *PaginatedRequestParams `json:"-" yaml:"-" mapstructure:"-"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2993,7 +2956,6 @@ func (j *ListResourceTemplatesRequest) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &plain); err != nil {
 		return err
 	}
-	plain.PaginatedRequestParams = &plain.Params
 	*j = ListResourceTemplatesRequest(plain)
 	return nil
 }
@@ -4576,9 +4538,6 @@ type ReadResourceResult struct {
 	// Contents corresponds to the JSON schema field "contents".
 	Contents []ReadResourceResultContentsElem `json:"contents" yaml:"contents" mapstructure:"contents"`
 
-	InputRequests map[string]interface{} `json:"inputRequests,omitempty" yaml:"inputRequests,omitempty" mapstructure:"inputRequests,omitempty"`
-	RequestState  *string                `json:"requestState,omitempty" yaml:"requestState,omitempty" mapstructure:"requestState,omitempty"`
-
 	// Indicates the type of the result, which allows the client to determine
 	// how to parse the result object.
 	//
@@ -4839,22 +4798,17 @@ func (j *ReadResourceResult) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
-	resultType, _ := raw["resultType"].(string)
-	if resultType != ResultTypeInputRequired {
-		if _, ok := raw["cacheScope"]; raw != nil && !ok {
-			return fmt.Errorf("field cacheScope in ReadResourceResult: required")
-		}
-		if _, ok := raw["contents"]; raw != nil && !ok {
-			return fmt.Errorf("field contents in ReadResourceResult: required")
-		}
-		if _, ok := raw["ttlMs"]; raw != nil && !ok {
-			return fmt.Errorf("field ttlMs in ReadResourceResult: required")
-		}
-	} else if _, hasInputs := raw["inputRequests"]; !hasInputs && raw["requestState"] == nil {
-		return fmt.Errorf("input_required ReadResourceResult requires inputRequests or requestState")
+	if _, ok := raw["cacheScope"]; raw != nil && !ok {
+		return fmt.Errorf("field cacheScope in ReadResourceResult: required")
+	}
+	if _, ok := raw["contents"]; raw != nil && !ok {
+		return fmt.Errorf("field contents in ReadResourceResult: required")
 	}
 	if _, ok := raw["resultType"]; raw != nil && !ok {
 		return fmt.Errorf("field resultType in ReadResourceResult: required")
+	}
+	if _, ok := raw["ttlMs"]; raw != nil && !ok {
+		return fmt.Errorf("field ttlMs in ReadResourceResult: required")
 	}
 	type Plain ReadResourceResult
 	var plain Plain
@@ -5964,23 +5918,11 @@ type ToolInputSchema struct {
 	// Schema corresponds to the JSON schema field "$schema".
 	Schema *string `json:"$schema,omitempty" yaml:"$schema,omitempty" mapstructure:"$schema,omitempty"`
 
-	// Properties is retained for source compatibility with the 2025-11-25 root
-	// schema API. July permits the full JSON Schema 2020-12 vocabulary.
-	Properties ToolInputSchemaProperties `json:"properties,omitempty" yaml:"properties,omitempty" mapstructure:"properties,omitempty"`
-
-	// Required is retained for source compatibility with the 2025-11-25 root
-	// schema API.
-	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
-
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
-
-// ToolInputSchemaProperties preserves the root package's pre-July API while
-// ToolInputSchema.AdditionalProperties carries other JSON Schema 2020-12 keys.
-type ToolInputSchemaProperties map[string]map[string]interface{}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
@@ -6017,18 +5959,6 @@ func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
 type ToolOutputSchema struct {
 	// Schema corresponds to the JSON schema field "$schema".
 	Schema *string `json:"$schema,omitempty" yaml:"$schema,omitempty" mapstructure:"$schema,omitempty"`
-
-	// Properties is retained for source compatibility with the 2025-11-25 root
-	// schema API.
-	Properties ToolInputSchemaProperties `json:"properties,omitempty" yaml:"properties,omitempty" mapstructure:"properties,omitempty"`
-
-	// Required is retained for source compatibility with the 2025-11-25 root
-	// schema API.
-	Required []string `json:"required,omitempty" yaml:"required,omitempty" mapstructure:"required,omitempty"`
-
-	// Type is retained for source compatibility with the 2025-11-25 root schema
-	// API. July output schemas may omit it.
-	Type string `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
@@ -6177,10 +6107,6 @@ type ServerCapabilities struct {
 
 	// Present if the server offers any resources to read.
 	Resources *ServerCapabilitiesResources `json:"resources,omitempty" yaml:"resources,omitempty" mapstructure:"resources,omitempty"`
-
-	// Tasks is retained for negotiated 2025-11-25 compatibility. July tasks are
-	// negotiated through Extensions instead.
-	Tasks *ServerCapabilitiesTasks `json:"tasks,omitempty" yaml:"tasks,omitempty" mapstructure:"tasks,omitempty"`
 
 	// Present if the server offers any tools to call.
 	Tools *ServerCapabilitiesTools `json:"tools,omitempty" yaml:"tools,omitempty" mapstructure:"tools,omitempty"`
