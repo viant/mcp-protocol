@@ -4932,11 +4932,17 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["io.modelcontextprotocol/clientCapabilities"]; raw != nil && !ok {
-		return fmt.Errorf("field io.modelcontextprotocol/clientCapabilities in RequestMetaObject: required")
-	}
-	if _, ok := raw["io.modelcontextprotocol/protocolVersion"]; raw != nil && !ok {
+	protocolVersion, _ := raw["io.modelcontextprotocol/protocolVersion"].(string)
+	if raw != nil && protocolVersion == "" {
 		return fmt.Errorf("field io.modelcontextprotocol/protocolVersion in RequestMetaObject: required")
+	}
+	// Per-request capabilities are a July protocol requirement. Older MCP
+	// clients, including the 2025-06-18 compatibility dialect, send only the
+	// negotiated protocol version (and optionally a progress token).
+	if protocolVersion == LatestProtocolVersion {
+		if _, ok := raw["io.modelcontextprotocol/clientCapabilities"]; !ok {
+			return fmt.Errorf("field io.modelcontextprotocol/clientCapabilities in RequestMetaObject: required")
+		}
 	}
 	type Plain RequestMetaObject
 	var plain Plain
