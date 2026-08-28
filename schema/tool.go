@@ -174,6 +174,8 @@ func WithNullableHook(hook func(field reflect.StructField) *bool) StructToProper
 }
 
 // StructToProperties converts a struct type into MCP InputSchema properties and required fields.
+// Fields tagged with mcp:"-" are excluded from the generated schema without
+// affecting their JSON encoding behavior.
 // It accepts optional StructToPropertiesOption to customize behavior (e.g., skipping fields, required logic, format overrides).
 func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolInputSchemaProperties, []string) {
 	var opt structToPropertiesOptions
@@ -196,6 +198,9 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		// Parse struct tags for json and format.
 		jsonTag := field.Tag.Get("json")
 		if jsonTag == "-" {
+			continue
+		}
+		if field.Tag.Get("mcp") == "-" {
 			continue
 		}
 

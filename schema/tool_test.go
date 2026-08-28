@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -187,6 +188,32 @@ func TestStructToProperties_InternalSkip(t *testing.T) {
 	}
 	if prop(props, "hidden") != nil {
 		t.Fatalf("expected hidden prop to be skipped")
+	}
+}
+
+func TestStructToProperties_MCPSkip(t *testing.T) {
+	type S struct {
+		Visible string `json:"visible"`
+		Hidden  string `json:"hidden" mcp:"-"`
+	}
+
+	props, req := StructToProperties(reflect.TypeOf(S{}))
+	if prop(props, "visible") == nil {
+		t.Fatalf("expected visible prop present")
+	}
+	if prop(props, "hidden") != nil {
+		t.Fatalf("expected mcp-tagged prop to be skipped")
+	}
+	if containsAll(req, "hidden") {
+		t.Fatalf("expected mcp-tagged prop not to be required, got: %v", req)
+	}
+
+	data, err := json.Marshal(S{Visible: "public", Hidden: "private"})
+	if err != nil {
+		t.Fatalf("marshal value: %v", err)
+	}
+	if string(data) != `{"visible":"public","hidden":"private"}` {
+		t.Fatalf("expected mcp tag not to affect JSON encoding, got: %s", data)
 	}
 }
 
