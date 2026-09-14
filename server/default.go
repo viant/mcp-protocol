@@ -49,6 +49,18 @@ func (d *DefaultHandler) populateCapabilities(capabilities *schema.ServerCapabil
 	if d.Prompts.Size() > 0 {
 		capabilities.Prompts = &schema.ServerCapabilitiesPrompts{}
 	}
+	// Never inherit a skills claim from an unrelated catalog or shared map.
+	extensions := make(map[string]map[string]interface{}, len(capabilities.Extensions)+1)
+	for key, value := range capabilities.Extensions {
+		if key != schema.SkillsExtension {
+			extensions[key] = value
+		}
+	}
+	if d.skills != nil && d.skills.Size() > 0 {
+		extensions[schema.SkillsExtension] = map[string]interface{}{}
+		capabilities.Resources = &schema.ServerCapabilitiesResources{}
+	}
+	capabilities.Extensions = extensions
 }
 
 // ListResources returns method-not-found by default.
@@ -73,6 +85,9 @@ func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *jso
 func (d *DefaultHandler) ReadResource(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ReadResourceRequest]) (*schema.ReadResourceResult, *jsonrpc.Error) {
 	request := jRequest.Request
 	// Delegate to registered resource handler
+	if result, err, ok := d.ReadStaticSkillResource(ctx, request); ok {
+		return result, err
+	}
 	handler, ok := d.getResourceHandler(request.Params.Uri)
 	if !ok {
 		return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("resource %v not found", request.Params.Uri), nil)

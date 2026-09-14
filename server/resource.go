@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"github.com/viant/jsonrpc"
 	"github.com/viant/mcp-protocol/schema"
 )
@@ -22,13 +23,21 @@ type ResourceEntry struct {
 }
 
 // RegisterResource registers a resource with metadata and handler on this handler.
-func (d *Registry) RegisterResource(resource schema.Resource, handler ResourceHandlerFunc) {
+func (d *Registry) RegisterResource(resource schema.Resource, handler ResourceHandlerFunc) error {
+	d.staticMu.RLock()
+	defer d.staticMu.RUnlock()
+	for _, compiled := range d.staticSkills {
+		if compiled.Contains(resource.Uri) {
+			return fmt.Errorf("resource belongs to a sealed static skill")
+		}
+	}
 	d.Methods.Put(schema.MethodResourcesList, true)
 	d.Methods.Put(schema.MethodResourcesRead, true)
 	d.ResourceRegistry.Put(resource.Uri, &ResourceEntry{
 		Handler:  handler,
 		Metadata: resource,
 	})
+	return nil
 }
 
 // RegisterResourceTemplate registers a resource template on this handler.
@@ -42,11 +51,29 @@ func (d *Registry) RegisterResourceTemplate(template schema.ResourceTemplate, ha
 
 // ListRegisteredResources returns metadata for all registered resources on this handler.
 func (d *Registry) ListRegisteredResources() []schema.Resource {
-	var list []schema.Resource
-	d.ResourceRegistry.Range(func(_ string, entry *ResourceEntry) bool {
-		list = append(list, entry.Metadata)
-		return true
-	})
+	d.staticMu.RLock()
+	defer d.staticMu.RUnlock()
+	authoritative := map[string]schema.Resource{}
+	for uri, resource := range d.staticResources {
+		copy, _ := cloneStaticResource(resource)
+		authoritative[uri] = copy
+	}
+	for _, entry := range d.ResourceRegistry.Values() {
+		claimed := false
+		for _, compiled := range d.staticSkills {
+			if compiled.Contains(entry.Metadata.Uri) {
+				claimed = true
+				break
+			}
+		}
+		if !claimed {
+			authoritative[entry.Metadata.Uri] = entry.Metadata
+		}
+	}
+	list := make([]schema.Resource, 0, len(authoritative))
+	for _, resource := range authoritative {
+		list = append(list, resource)
+	}
 	return list
 }
 

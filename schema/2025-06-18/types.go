@@ -3,6 +3,7 @@
 package schema
 
 import "encoding/json"
+import "github.com/viant/mcp-protocol/schema/internal/resourcecontent"
 import "errors"
 import "fmt"
 import "reflect"
@@ -1009,6 +1010,7 @@ type EmbeddedResource struct {
 }
 
 type EmbeddedResourceResource struct {
+	contentSelection resourcecontent.Selection
 	// See [specification/2025-06-18/basic/index#general-fields] for notes on _meta
 	// usage.
 	Meta map[string]interface{} `json:"_meta,omitempty" yaml:"_meta,omitempty" mapstructure:"_meta,omitempty"`
@@ -1033,6 +1035,10 @@ func (j *EmbeddedResourceResource) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &raw); err != nil {
 		return err
 	}
+	selection, err := resourcecontent.FromObject(raw)
+	if err != nil {
+		return err
+	}
 	var embeddedResourceResource_0 EmbeddedResourceResource_0
 	var embeddedResourceResource_1 EmbeddedResourceResource_1
 	var errs []error
@@ -1051,6 +1057,7 @@ func (j *EmbeddedResourceResource) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	*j = EmbeddedResourceResource(plain)
+	j.contentSelection = selection
 	return nil
 }
 
