@@ -79,6 +79,10 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 	if t == reflect.TypeFor[time.Time]() {
 		return map[string]any{"type": "string", "format": "date-time"}, nil
 	}
+	if t == reflect.TypeFor[json.RawMessage]() {
+		// RawMessage represents any JSON value, regardless of its underlying slice type.
+		return map[string]any{}, nil
+	}
 	pointer := reflect.PointerTo(t)
 	if t.Implements(reflect.TypeFor[json.Marshaler]()) || pointer.Implements(reflect.TypeFor[json.Marshaler]()) ||
 		pointer.Implements(reflect.TypeFor[json.Unmarshaler]()) || t.Implements(reflect.TypeFor[encoding.TextMarshaler]()) ||

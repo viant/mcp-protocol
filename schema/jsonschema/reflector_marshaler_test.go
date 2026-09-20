@@ -1,6 +1,7 @@
 package jsonschema_test
 
 import (
+	"encoding/json"
 	"github.com/viant/mcp-protocol/schema/jsonschema"
 	"reflect"
 	"testing"
@@ -26,8 +27,13 @@ func (valueText) MarshalText() ([]byte, error) { panic("schema generation execut
 type ptrDecoder struct{ Value string }
 
 func (*ptrDecoder) UnmarshalJSON([]byte) error { panic("schema generation executed UnmarshalJSON") }
+
+type opaqueRaw json.RawMessage
+
+func (opaqueRaw) MarshalJSON() ([]byte, error) { panic("schema generation executed MarshalJSON") }
+
 func TestReflectorRejectsOpaqueMethodSets(t *testing.T) {
-	for _, typ := range []reflect.Type{reflect.TypeFor[ptrJSON](), reflect.TypeFor[*ptrJSON](), reflect.TypeFor[[]ptrJSON](), reflect.TypeFor[map[string]ptrJSON](), reflect.TypeFor[struct{ Child ptrJSON }](), reflect.TypeFor[ptrText](), reflect.TypeFor[*ptrText](), reflect.TypeFor[valueJSON](), reflect.TypeFor[valueText](), reflect.TypeFor[ptrDecoder]()} {
+	for _, typ := range []reflect.Type{reflect.TypeFor[ptrJSON](), reflect.TypeFor[*ptrJSON](), reflect.TypeFor[[]ptrJSON](), reflect.TypeFor[map[string]ptrJSON](), reflect.TypeFor[struct{ Child ptrJSON }](), reflect.TypeFor[ptrText](), reflect.TypeFor[*ptrText](), reflect.TypeFor[valueJSON](), reflect.TypeFor[valueText](), reflect.TypeFor[ptrDecoder](), reflect.TypeFor[opaqueRaw](), reflect.TypeFor[*opaqueRaw]()} {
 		t.Run(typ.String(), func(t *testing.T) {
 			if _, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: typ}); err == nil {
 				t.Fatal("opaque source accepted", typ)
