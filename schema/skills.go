@@ -148,7 +148,9 @@ type ListSkillsResult struct {
 	CacheScope CacheableResultCacheScope `json:"cacheScope,omitempty"`
 }
 type GetSkillResult struct {
-	Meta       *ResultMetaObject `json:"_meta,omitempty"`
-	ResultType string            `json:"resultType,omitempty"`
-	Skill      Skill             `json:"skill"`
+	TtlMs      *int                      `json:"ttlMs,omitempty"`
+	CacheScope CacheableResultCacheScope `json:"cacheScope,omitempty"`
+	Meta       *ResultMetaObject         `json:"_meta,omitempty"`
+	ResultType string                    `json:"resultType,omitempty"`
+	Skill      Skill                     `json:"skill"`
 }

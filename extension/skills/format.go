@@ -35,6 +35,13 @@ func Frontmatter(data []byte) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("unterminated skill frontmatter")
 	}
 	var result map[string]interface{}
+	var document yaml.Node
+	if err := yaml.Unmarshal(bytes.Join(lines[1:end], []byte("\n")), &document); err != nil {
+		return nil, err
+	}
+	if err := validateJSONKeys(&document); err != nil {
+		return nil, err
+	}
 	if err := yaml.Unmarshal(bytes.Join(lines[1:end], []byte("\n")), &result); err != nil {
 		return nil, err
 	}
@@ -52,6 +59,24 @@ func Frontmatter(data []byte) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+// YAML-to-map decoding may coerce numeric keys into strings. Reject those
+// before conversion so advertised frontmatter is a verbatim JSON object.
+func validateJSONKeys(node *yaml.Node) error {
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i < len(node.Content); i += 2 {
+			if node.Content[i].Tag != "!!str" {
+				return fmt.Errorf("skill frontmatter requires string mapping keys")
+			}
+		}
+	}
+	for _, child := range node.Content {
+		if err := validateJSONKeys(child); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ValidateFrontmatter(front map[string]interface{}) error {

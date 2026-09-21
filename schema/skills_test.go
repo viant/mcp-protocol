@@ -18,3 +18,14 @@ func TestSkillRequiredFieldsAndUnion(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(raw), "9007199254740993")
 }
+
+func TestGetSkillCacheContractRoundTrip(t *testing.T) {
+	raw := `{"resultType":"complete","ttlMs":0,"cacheScope":"private","skill":{"uri":"skill://demo/SKILL.md","frontmatter":{"name":"demo","description":"demo"},"resources":"dynamic"}}`
+	var result GetSkillResult
+	require.NoError(t, json.Unmarshal([]byte(raw), &result))
+	require.NotNil(t, result.TtlMs)
+	require.Equal(t, CacheableResultCacheScopePrivate, result.CacheScope)
+	encoded, err := json.Marshal(result)
+	require.NoError(t, err)
+	require.JSONEq(t, raw, string(encoded))
+}
