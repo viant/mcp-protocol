@@ -3012,6 +3012,7 @@
       "type": "object"
     },
     "ResultMetaObject": {
+      "additionalProperties": true,
       "description": "Extends {@link MetaObject} with additional result-specific fields. All key naming rules from `MetaObject` apply.",
       "properties": {
         "io.modelcontextprotocol/serverInfo": {

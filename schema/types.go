@@ -5443,6 +5443,8 @@ type Result struct {
 // Extends {@link MetaObject} with additional result-specific fields. All key
 // naming rules from `MetaObject` apply.
 type ResultMetaObject struct {
+	// AdditionalProperties preserves application and protocol extension metadata.
+	AdditionalProperties interface{} `json:"-" yaml:",inline" mapstructure:",remain"`
 	// Identifies the server software producing the response. Servers SHOULD
 	// include this field on every response unless specifically configured not
 	// to do so.
