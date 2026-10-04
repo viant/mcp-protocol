@@ -6014,6 +6014,9 @@ func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
 		delete(raw, st.Field(i).Name)
 		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
 	}
+	// JSON Schema additionalProperties is vocabulary, not this Go catchall field.
+	// Clear the value assigned by encoding/json before decoding the remaining map.
+	plain.AdditionalProperties = nil
 	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
 	}
