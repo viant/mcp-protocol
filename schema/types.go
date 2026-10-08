@@ -4945,6 +4945,9 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	if raw != nil && protocolVersion == "" {
 		return fmt.Errorf("field io.modelcontextprotocol/protocolVersion in RequestMetaObject: required")
 	}
+	// Per-request capabilities are a July protocol requirement. Older MCP
+	// clients, including the 2025-06-18 compatibility dialect, send only the
+	// negotiated protocol version (and optionally a progress token).
 	if protocolVersion == LatestProtocolVersion {
 		if _, ok := raw["io.modelcontextprotocol/clientCapabilities"]; !ok {
 			return fmt.Errorf("field io.modelcontextprotocol/clientCapabilities in RequestMetaObject: required")
@@ -4957,8 +4960,10 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	}
 	st := reflect.TypeOf(Plain{})
 	for i := range st.NumField() {
-		delete(raw, st.Field(i).Name)
-		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
+		key := strings.Split(st.Field(i).Tag.Get("json"), ",")[0]
+		if key != "" && key != "-" {
+			delete(raw, key)
+		}
 	}
 	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
@@ -5450,6 +5455,8 @@ type Result struct {
 // Extends {@link MetaObject} with additional result-specific fields. All key
 // naming rules from `MetaObject` apply.
 type ResultMetaObject struct {
+	// AdditionalProperties preserves application and protocol extension metadata.
+	AdditionalProperties interface{} `json:"-" yaml:",inline" mapstructure:",remain"`
 	// Identifies the server software producing the response. Servers SHOULD
 	// include this field on every response unless specifically configured not
 	// to do so.
@@ -6021,6 +6028,9 @@ func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
 		delete(raw, st.Field(i).Name)
 		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
 	}
+	// JSON Schema additionalProperties is vocabulary, not this Go catchall field.
+	// Clear the value assigned by encoding/json before decoding the remaining map.
+	plain.AdditionalProperties = nil
 	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
 	}

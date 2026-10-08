@@ -4908,8 +4908,10 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	}
 	st := reflect.TypeOf(Plain{})
 	for i := range st.NumField() {
-		delete(raw, st.Field(i).Name)
-		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
+		key := strings.Split(st.Field(i).Tag.Get("json"), ",")[0]
+		if key != "" && key != "-" {
+			delete(raw, key)
+		}
 	}
 	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
@@ -5401,6 +5403,8 @@ type Result struct {
 // Extends {@link MetaObject} with additional result-specific fields. All key
 // naming rules from `MetaObject` apply.
 type ResultMetaObject struct {
+	// AdditionalProperties preserves application and protocol extension metadata.
+	AdditionalProperties interface{} `json:"-" yaml:",inline" mapstructure:",remain"`
 	// Identifies the server software producing the response. Servers SHOULD
 	// include this field on every response unless specifically configured not
 	// to do so.

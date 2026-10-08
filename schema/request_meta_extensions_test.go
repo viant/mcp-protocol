@@ -6,7 +6,7 @@ import (
 )
 
 func TestRequestMetaExtensionsRoundTripAndCannotOverrideProtocolFields(t *testing.T) {
-	raw := []byte(`{"io.modelcontextprotocol/protocolVersion":"2025-06-18","viant.datly/component":{"id":"example","revision":"release-1"}}`)
+	raw := []byte(`{"io.modelcontextprotocol/protocolVersion":"2025-06-18","viant.datly/component":{"id":"example","revision":"release-1"},"AdditionalProperties":{"opaque":true},"IoModelcontextprotocolProtocolVersion":"opaque"}`)
 	var meta RequestMetaObject
 	if err := json.Unmarshal(raw, &meta); err != nil {
 		t.Fatal(err)
@@ -27,5 +27,8 @@ func TestRequestMetaExtensionsRoundTripAndCannotOverrideProtocolFields(t *testin
 	}
 	if decoded["viant.datly/component"] == nil || decoded["io.modelcontextprotocol/protocolVersion"] != "2025-06-18" || decoded["progressToken"] != nil {
 		t.Fatalf("metadata authority changed or extension lost: %s", encoded)
+	}
+	if decoded["AdditionalProperties"] == nil || decoded["IoModelcontextprotocolProtocolVersion"] != "opaque" {
+		t.Fatalf("unknown metadata was reinterpreted as a Go field: %s", encoded)
 	}
 }

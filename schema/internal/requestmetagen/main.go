@@ -55,6 +55,13 @@ func generate() error {
 		return err
 	}
 	block = bytes.ReplaceAll(block, []byte("AdditionalProperties interface{} `mapstructure:\",remain\"`"), []byte("AdditionalProperties interface{} `json:\"-\" yaml:\"-\" mapstructure:\",remain\"`"))
+	// Go field names are not wire keys. Preserve all unknown metadata as data,
+	// including keys coinciding with generated Go names or the carrier field.
+	block = bytes.ReplaceAll(block, []byte(`delete(raw, st.Field(i).Name)
+		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])`), []byte(`key := strings.Split(st.Field(i).Tag.Get("json"), ",")[0]
+		if key != "" && key != "-" {
+			delete(raw, key)
+		}`))
 	// The explicit July package retains its strict July requirements; the root
 	// carrier additionally supports older negotiated dialects.
 	if err := replaceCarrier(filepath.Join("2026-07-28", "types.go"), block); err != nil {
@@ -71,6 +78,9 @@ func generate() error {
 	if raw != nil && protocolVersion == "" {
 		return fmt.Errorf("field io.modelcontextprotocol/protocolVersion in RequestMetaObject: required")
 	}
+	// Per-request capabilities are a July protocol requirement. Older MCP
+	// clients, including the 2025-06-18 compatibility dialect, send only the
+	// negotiated protocol version (and optionally a progress token).
 	if protocolVersion == LatestProtocolVersion {
 		if _, ok := raw["io.modelcontextprotocol/clientCapabilities"]; !ok {
 			return fmt.Errorf("field io.modelcontextprotocol/clientCapabilities in RequestMetaObject: required")
