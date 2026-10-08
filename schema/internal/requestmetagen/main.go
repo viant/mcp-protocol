@@ -24,24 +24,21 @@ func generate() error {
 	if err != nil {
 		return err
 	}
-	var schema struct {
-		Defs map[string]struct {
-			AdditionalProperties json.RawMessage `json:"additionalProperties"`
-		} `json:"$defs"`
-	}
-	if err := json.Unmarshal(data, &schema); err != nil {
+	data, err = generatorSchema(data)
+	if err != nil {
 		return err
-	}
-	if len(schema.Defs["RequestMetaObject"].AdditionalProperties) == 0 {
-		return fmt.Errorf("RequestMetaObject must explicitly preserve additional properties")
 	}
 	dir, err := os.MkdirTemp("", "mcp-request-meta-generate-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir)
+	input := filepath.Join(dir, source)
+	if err := os.WriteFile(input, data, 0600); err != nil {
+		return err
+	}
 	generated := filepath.Join(dir, "types.go")
-	cmd := exec.Command("go", "run", "github.com/atombender/go-jsonschema@v0.20.0", source, "-p", "schema", "-o", generated)
+	cmd := exec.Command("go", "run", "github.com/atombender/go-jsonschema@v0.20.0", input, "-p", "schema", "-o", generated)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return err
@@ -116,4 +113,39 @@ func carrier(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("request metadata carrier boundary missing")
 	}
 	return data[start : start+end], nil
+}
+
+// generatorSchema makes JSON Schema's implicit open-object semantics explicit
+// solely for code generation. The vendored protocol schema remains unchanged.
+func generatorSchema(data []byte) ([]byte, error) {
+	var document map[string]json.RawMessage
+	if err := json.Unmarshal(data, &document); err != nil {
+		return nil, err
+	}
+	var definitions map[string]json.RawMessage
+	if err := json.Unmarshal(document["$defs"], &definitions); err != nil {
+		return nil, err
+	}
+	var metadata map[string]json.RawMessage
+	if err := json.Unmarshal(definitions["RequestMetaObject"], &metadata); err != nil {
+		return nil, err
+	}
+	if metadata == nil {
+		return nil, fmt.Errorf("request metadata schema is missing")
+	}
+	if declared, ok := metadata["additionalProperties"]; ok {
+		value := bytes.TrimSpace(declared)
+		if !bytes.Equal(value, []byte("{}")) && !bytes.Equal(value, []byte("true")) {
+			return nil, fmt.Errorf("request metadata extension constraints changed; review generator")
+		}
+	}
+	metadata["additionalProperties"] = json.RawMessage(`{}`)
+	var err error
+	if definitions["RequestMetaObject"], err = json.Marshal(metadata); err != nil {
+		return nil, err
+	}
+	if document["$defs"], err = json.Marshal(definitions); err != nil {
+		return nil, err
+	}
+	return json.MarshalIndent(document, "", "  ")
 }
