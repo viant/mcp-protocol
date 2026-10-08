@@ -4931,6 +4931,8 @@ type RequestMetaObject struct {
 	// opaque token that will be attached to any subsequent notifications. The
 	// receiver is not obligated to provide these notifications.
 	ProgressToken *ProgressToken `json:"progressToken,omitempty" yaml:"progressToken,omitempty" mapstructure:"progressToken,omitempty"`
+
+	AdditionalProperties interface{} `json:"-" yaml:"-" mapstructure:",remain"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -4943,9 +4945,6 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	if raw != nil && protocolVersion == "" {
 		return fmt.Errorf("field io.modelcontextprotocol/protocolVersion in RequestMetaObject: required")
 	}
-	// Per-request capabilities are a July protocol requirement. Older MCP
-	// clients, including the 2025-06-18 compatibility dialect, send only the
-	// negotiated protocol version (and optionally a progress token).
 	if protocolVersion == LatestProtocolVersion {
 		if _, ok := raw["io.modelcontextprotocol/clientCapabilities"]; !ok {
 			return fmt.Errorf("field io.modelcontextprotocol/clientCapabilities in RequestMetaObject: required")
@@ -4954,6 +4953,14 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	type Plain RequestMetaObject
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	st := reflect.TypeOf(Plain{})
+	for i := range st.NumField() {
+		delete(raw, st.Field(i).Name)
+		delete(raw, strings.Split(st.Field(i).Tag.Get("json"), ",")[0])
+	}
+	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
 	}
 	*j = RequestMetaObject(plain)
