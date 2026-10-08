@@ -23,7 +23,11 @@ type Reflector struct {
 	// ExcludeInternal removes internal-tagged JSON winners from public input schemas.
 	// The zero value retains ordinary encoding/json schema semantics.
 	ExcludeInternal bool
-	Annotate        func(string, reflect.StructField) (string, any)
+	// ExcludeField applies owner-defined visibility to canonical JSON winners
+	// and their embedding owners before compiling child schemas or annotations.
+	// Nil preserves ordinary JSON field visibility.
+	ExcludeField func(reflect.StructField) bool
+	Annotate     func(string, reflect.StructField) (string, any)
 }
 type Request struct {
 	Type     reflect.Type
@@ -123,7 +127,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 			return nil, err
 		}
 		for _, field := range fields {
-			if field.Field.Tag.Get("setMarker") == "true" || (c.reflector.ExcludeInternal && internalJSONField(t, field.Field.Index)) {
+			if field.Field.Tag.Get("setMarker") == "true" || c.reflector.excludedJSONField(t, field.Field.Index) {
 				continue
 			}
 			fieldPath := field.Field.Name
@@ -183,16 +187,19 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 	return nil, fmt.Errorf("source type %s is unsupported", t)
 }
 
-// internalJSONField checks the canonical selected index, including promoted
+// excludedJSONField checks the canonical selected index, including promoted
 // embedding owners. Filtering happens after JSON dominance so a shadowed public
 // field never becomes visible when an internal winner is excluded.
-func internalJSONField(owner reflect.Type, index []int) bool {
+func (r Reflector) excludedJSONField(owner reflect.Type, index []int) bool {
+	if !r.ExcludeInternal && r.ExcludeField == nil {
+		return false
+	}
 	for _, position := range index {
 		for owner.Kind() == reflect.Pointer {
 			owner = owner.Elem()
 		}
 		field := owner.Field(position)
-		if field.Tag.Get("internal") == "true" {
+		if r.ExcludeInternal && field.Tag.Get("internal") == "true" || r.ExcludeField != nil && r.ExcludeField(field) {
 			return true
 		}
 		owner = field.Type
