@@ -2687,6 +2687,7 @@
       ]
     },
     "RequestMetaObject": {
+      "additionalProperties": {},
       "description": "Extends {@link MetaObject} with additional request-specific fields. All key naming rules from `MetaObject` apply.",
       "properties": {
         "io.modelcontextprotocol/clientCapabilities": {

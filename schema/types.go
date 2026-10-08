@@ -4931,6 +4931,8 @@ type RequestMetaObject struct {
 	// opaque token that will be attached to any subsequent notifications. The
 	// receiver is not obligated to provide these notifications.
 	ProgressToken *ProgressToken `json:"progressToken,omitempty" yaml:"progressToken,omitempty" mapstructure:"progressToken,omitempty"`
+
+	AdditionalProperties interface{} `json:"-" yaml:"-" mapstructure:",remain"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -4954,6 +4956,16 @@ func (j *RequestMetaObject) UnmarshalJSON(value []byte) error {
 	type Plain RequestMetaObject
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	st := reflect.TypeOf(Plain{})
+	for i := range st.NumField() {
+		key := strings.Split(st.Field(i).Tag.Get("json"), ",")[0]
+		if key != "" && key != "-" {
+			delete(raw, key)
+		}
+	}
+	if err := mapstructure.Decode(raw, &plain.AdditionalProperties); err != nil {
 		return err
 	}
 	*j = RequestMetaObject(plain)
