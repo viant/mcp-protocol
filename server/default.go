@@ -68,7 +68,9 @@ func (d *DefaultHandler) ListResources(ctx context.Context, request *jsonrpc.Typ
 	// Return list of registered resources
 	resources := d.ListRegisteredResources()
 	return &schema.ListResourcesResult{
-		Resources: resources,
+		ResultType: schema.ResultTypeComplete,
+		CacheScope: schema.ListResourcesResultCacheScopePrivate,
+		Resources:  resources,
 	}, nil
 }
 
@@ -77,6 +79,8 @@ func (d *DefaultHandler) ListResourceTemplates(ctx context.Context, request *jso
 	// Return list of registered resource templates
 	templates := d.ListRegisteredResourceTemplates()
 	return &schema.ListResourceTemplatesResult{
+		ResultType:        schema.ResultTypeComplete,
+		CacheScope:        schema.ListResourceTemplatesResultCacheScopePrivate,
 		ResourceTemplates: templates,
 	}, nil
 }
@@ -90,7 +94,7 @@ func (d *DefaultHandler) ReadResource(ctx context.Context, jRequest *jsonrpc.Typ
 	}
 	handler, ok := d.getResourceHandler(request.Params.Uri)
 	if !ok {
-		return nil, jsonrpc.NewMethodNotFound(fmt.Sprintf("resource %v not found", request.Params.Uri), nil)
+		return nil, jsonrpc.NewInvalidParamsError(fmt.Sprintf("resource %v not found", request.Params.Uri), nil)
 	}
 	return handler(ctx, request)
 }
