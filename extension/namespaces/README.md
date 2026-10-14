@@ -1,12 +1,19 @@
 # Namespace catalog extension
 
-These are optional ordinary MCP tools, not changes to standard MCP methods.
+These are optional ordinary MCP tools for namespace-focused discovery. The
+required interoperable resource path is standard MCP `resources/list` and
+`resources/read` with `params.uri`; neither `resource/get` nor `resources/get`
+is a standard MCP method.
 
 | Tool | Request | Response |
 | --- | --- | --- |
 | `namespaces/list` | `cursor?` | `namespaces: [{uri,name,description?}], nextCursor?` |
 | `namespaces/get` | `uri: ns://<id>, kind?, cursor?` | `resources: [{uri,kind,name,description?,mimeType?}], nextCursor?, namespace?` |
-| `resource/get` | `uri` | The selected resource's JSON definition |
+
+Resource contents, including `navigation://`, `window://`, and `mcp://`
+definitions, are published through `resources/read`. A namespace index may
+accelerate discovery, but clients must be able to read a listed resource with
+the standard method without calling these optional tools.
 
 Omitting `kind` lists all accessible resource kinds in the namespace. The owning
 MCP applies authorization and kind filtering **before** pagination. It sorts

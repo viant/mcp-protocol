@@ -5,6 +5,8 @@ package namespaces
 const (
 	ListToolName        = "namespaces/list"
 	GetToolName         = "namespaces/get"
+	// ResourceGetToolName is a legacy ordinary tool name. New publishers and
+	// clients use the standard MCP resources/read method instead.
 	ResourceGetToolName = "resource/get"
 )
 
@@ -45,8 +47,8 @@ type GetResult struct {
 	Namespace  *Namespace `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
-// ResourceGetRequest selects one resource. The response is the resource's own
-// JSON definition; the generic extension imposes no configuration envelope.
+// ResourceGetRequest is retained for legacy ordinary tool adapters. Standard
+// MCP clients select resource contents with resources/read and params.uri.
 type ResourceGetRequest struct {
 	URI string `json:"uri" yaml:"uri"`
 }
