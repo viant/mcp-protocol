@@ -155,7 +155,12 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		}
 		return map[string]any{"type": "array", "items": element}, nil
 	case reflect.Map:
-		if t.Key().Kind() != reflect.String {
+		// encoding/json encodes integer keys as decimal object member names.
+		// Preserve legacy discovery for those ordinary serializable maps.
+		switch t.Key().Kind() {
+		case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		default:
 			return nil, fmt.Errorf("map key %s is unsupported", t.Key())
 		}
 		value, err := c.value(t.Elem(), path)
