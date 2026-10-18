@@ -6,6 +6,8 @@ across clients/servers and tools.
 
 Current extensions:
 
+- `namespaces`: ordinary namespace catalog tools, opaque namespace references,
+  resource summaries, and optional generic snapshot pagination.
 - `continuation`: a reusable pagination/truncation hint (fields for hasMore,
   remaining/returned, nextRange/pageToken, mode, binary) that tools can attach
   to responses when content is clipped or paged.

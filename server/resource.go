@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/viant/jsonrpc"
 	"github.com/viant/mcp-protocol/schema"
+	"sort"
 )
 
 // ResourceTemplateEntry holds metadata for a resource template.
@@ -74,6 +75,7 @@ func (d *Registry) ListRegisteredResources() []schema.Resource {
 	for _, resource := range authoritative {
 		list = append(list, resource)
 	}
+	sort.Slice(list, func(i, j int) bool { return list[i].Uri < list[j].Uri })
 	return list
 }
 
@@ -84,6 +86,7 @@ func (d *Registry) ListRegisteredResourceTemplates() []schema.ResourceTemplate {
 		list = append(list, entry.Metadata)
 		return true
 	})
+	sort.Slice(list, func(i, j int) bool { return list[i].UriTemplate < list[j].UriTemplate })
 	return list
 }
 
