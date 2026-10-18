@@ -134,10 +134,10 @@ type OpaqueContainer struct {
 	Opaque OpaqueInternal `json:"opaque" internal:"true"`
 }
 
-func TestReflectorInternalExcludedBeforeCustomAuthority(t *testing.T) {
-	_, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: reflect.TypeFor[OpaqueContainer]()})
-	if err == nil {
-		t.Fatal("ordinary custom authority error changed")
+func TestReflectorInternalFilteringPreservesCustomGoShape(t *testing.T) {
+	ordinary, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: reflect.TypeFor[OpaqueContainer]()})
+	if err != nil || len(ordinary["properties"].(map[string]any)) != 2 {
+		t.Fatal("ordinary Go shape changed", ordinary, err)
 	}
 	result, err := (jsonschema.Reflector{ExcludeInternal: true}).Compile(jsonschema.Request{Type: reflect.TypeFor[OpaqueContainer]()})
 	if err != nil {

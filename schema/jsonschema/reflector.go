@@ -96,12 +96,8 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		// RawMessage represents any JSON value, regardless of its underlying slice type.
 		return map[string]any{}, nil
 	}
-	pointer := reflect.PointerTo(t)
-	if t.Implements(reflect.TypeFor[json.Marshaler]()) || pointer.Implements(reflect.TypeFor[json.Marshaler]()) ||
-		pointer.Implements(reflect.TypeFor[json.Unmarshaler]()) || t.Implements(reflect.TypeFor[encoding.TextMarshaler]()) ||
-		pointer.Implements(reflect.TypeFor[encoding.TextMarshaler]()) || pointer.Implements(reflect.TypeFor[encoding.TextUnmarshaler]()) {
-		return nil, fmt.Errorf("custom JSON source %s requires authored wire authority", t)
-	}
+	// Match legacy discovery when no explicit wire mapping is supplied. Custom
+	// methods do not replace the reflected schema and are never called here.
 	switch t.Kind() {
 	case reflect.Struct:
 		if id := c.active[t]; id != "" {

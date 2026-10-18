@@ -32,11 +32,11 @@ type opaqueRaw json.RawMessage
 
 func (opaqueRaw) MarshalJSON() ([]byte, error) { panic("schema generation executed MarshalJSON") }
 
-func TestReflectorRejectsOpaqueMethodSets(t *testing.T) {
+func TestReflectorPreservesGoShapeWithoutCallingCustomMethods(t *testing.T) {
 	for _, typ := range []reflect.Type{reflect.TypeFor[ptrJSON](), reflect.TypeFor[*ptrJSON](), reflect.TypeFor[[]ptrJSON](), reflect.TypeFor[map[string]ptrJSON](), reflect.TypeFor[struct{ Child ptrJSON }](), reflect.TypeFor[ptrText](), reflect.TypeFor[*ptrText](), reflect.TypeFor[valueJSON](), reflect.TypeFor[valueText](), reflect.TypeFor[ptrDecoder](), reflect.TypeFor[opaqueRaw](), reflect.TypeFor[*opaqueRaw]()} {
 		t.Run(typ.String(), func(t *testing.T) {
-			if _, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: typ}); err == nil {
-				t.Fatal("opaque source accepted", typ)
+			if schema, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: typ}); err != nil || schema == nil {
+				t.Fatal("custom source reflection failed", typ, err)
 			}
 		})
 	}
@@ -44,5 +44,17 @@ func TestReflectorRejectsOpaqueMethodSets(t *testing.T) {
 		if _, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: typ}); err != nil {
 			t.Fatal(typ, err)
 		}
+	}
+}
+
+func TestCustomDecoderNestedSlicePreservesGoFieldSchema(t *testing.T) {
+	shape, err := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: reflect.TypeFor[[]*ptrDecoder]()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := shape["items"].(map[string]any)
+	properties := item["properties"].(map[string]any)
+	if shape["type"] != "array" || properties["Value"].(map[string]any)["type"] != "string" {
+		t.Fatal(shape)
 	}
 }

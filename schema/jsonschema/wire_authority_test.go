@@ -18,8 +18,8 @@ type recursiveAuthoredWire recursiveCustomWireSource
 
 func TestAuthoredWireAuthorityPreservesRecursiveCanonicalContract(t *testing.T) {
 	source := reflect.TypeFor[recursiveCustomWireSource]()
-	if _, err := (Reflector{}).Compile(Request{Type: source}); err == nil {
-		t.Fatal("custom wire shape inferred without authority")
+	if shape, err := (Reflector{}).Compile(Request{Type: source}); err != nil || shape["$defs"] == nil {
+		t.Fatal("recursive Go shape fallback failed", err)
 	}
 	schema, err := (Reflector{WireTypes: map[reflect.Type]reflect.Type{source: reflect.TypeFor[recursiveAuthoredWire]()}}).Compile(Request{Type: source})
 	if err != nil {
