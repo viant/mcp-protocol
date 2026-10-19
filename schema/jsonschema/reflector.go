@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"github.com/viant/mcp-protocol/schema/fieldname"
 	xshape "github.com/viant/x/shape"
 	"reflect"
 	"strings"
@@ -93,6 +94,16 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 	if wire := c.reflector.WireTypes[t]; wire != nil {
 		return c.value(wire, path)
 	}
+	if fieldname.CustomJSON(t) {
+		yes, err := fieldname.HasNames(t, c.reflector.nameVisibility())
+		if err != nil {
+			return nil, err
+		}
+		if yes {
+			return nil, fmt.Errorf("MCP names on custom JSON type %s require decoding authority", t)
+		}
+	}
+
 	if t == reflect.TypeFor[time.Time]() {
 		return map[string]any{"type": "string", "format": "date-time"}, nil
 	}
@@ -104,6 +115,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 	// methods do not replace the reflected schema and are never called here.
 	switch t.Kind() {
 	case reflect.Struct:
+
 		if id := c.active[t]; id != "" {
 			c.referenced[id] = true
 			return map[string]any{"$ref": c.prefix + id}, nil
@@ -122,10 +134,29 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		if err != nil {
 			return nil, err
 		}
+		entries := make([]fieldname.Entry, 0, len(fields))
+		names := map[string]fieldname.Name{}
 		for _, field := range fields {
 			if field.Field.Tag.Get("setMarker") == "true" || c.reflector.excludedJSONField(t, field.Field.Index) {
 				continue
 			}
+			name, err := fieldname.Resolve(field.Field.StructField(), field.Name)
+			if err != nil {
+				return nil, err
+			}
+			names[field.Name] = name
+			name.Hidden = false // Already retained by the owner visibility policy.
+			entries = append(entries, fieldname.Entry{Field: field.Field.StructField(), JSONName: field.Name, Name: name})
+		}
+		if err := fieldname.Validate(entries); err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			// Retain owner visibility before interpreting authored naming.
+			if field.Field.Tag.Get("setMarker") == "true" || c.reflector.excludedJSONField(t, field.Field.Index) {
+				continue
+			}
+			name := names[field.Name]
 			fieldPath := field.Field.Name
 			if path != "" {
 				fieldPath = path + "." + fieldPath
@@ -146,7 +177,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 					property["examples"] = []any{example}
 				}
 			}
-			properties[field.Name] = property
+			properties[name.Public] = property
 		}
 		return result, nil
 	case reflect.Slice, reflect.Array:
@@ -192,20 +223,10 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 // embedding owners. Filtering happens after JSON dominance so a shadowed public
 // field never becomes visible when an internal winner is excluded.
 func (r Reflector) excludedJSONField(owner reflect.Type, index []int) bool {
-	if !r.ExcludeInternal && r.ExcludeField == nil {
-		return false
-	}
-	for _, position := range index {
-		for owner.Kind() == reflect.Pointer {
-			owner = owner.Elem()
-		}
-		field := owner.Field(position)
-		if r.ExcludeInternal && field.Tag.Get("internal") == "true" || r.ExcludeField != nil && r.ExcludeField(field) {
-			return true
-		}
-		owner = field.Type
-	}
-	return false
+	return r.nameVisibility().Excluded(owner, index)
+}
+func (r Reflector) nameVisibility() fieldname.Visibility {
+	return fieldname.Visibility{ExcludeInternal: r.ExcludeInternal, ExcludeField: r.ExcludeField}
 }
 
 func validateWireTypes(authority map[reflect.Type]reflect.Type) error {

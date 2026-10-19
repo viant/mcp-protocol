@@ -23,6 +23,7 @@ var (
 // types) should be kept or suppressed.
 // It detects and breaks cycles in types, returning an empty object schema on recursion.
 func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
+	opts = customBoundaryOptions(t, opts)
 	schema := make(map[string]interface{})
 
 	// initialize cycle-detection state on outermost call
@@ -126,6 +127,7 @@ func typeSchema(t reflect.Type, opts ...StructToPropertiesOption) map[string]int
 type StructToPropertiesOption func(*structToPropertiesOptions)
 
 type structToPropertiesOptions struct {
+	skipMCPNames    bool
 	SkipFieldHook   func(field reflect.StructField) bool
 	IsRequiredHook  func(field reflect.StructField) bool
 	FormatHook      func(field reflect.StructField) string
@@ -178,6 +180,7 @@ func WithNullableHook(hook func(field reflect.StructField) *bool) StructToProper
 // affecting their JSON encoding behavior.
 // It accepts optional StructToPropertiesOption to customize behavior (e.g., skipping fields, required logic, format overrides).
 func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolInputSchemaProperties, []string) {
+	opts = customBoundaryOptions(t, opts)
 	var opt structToPropertiesOptions
 	for _, o := range opts {
 		o(&opt)
@@ -337,7 +340,10 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		}
 	}
 
-	return properties, required
+	if opt.skipMCPNames {
+		return properties, required
+	}
+	return applyLegacyFieldNames(t, properties, required)
 }
 
 func parseFieldExample(field reflect.StructField) (interface{}, bool) {
@@ -360,6 +366,9 @@ func (s *ToolInputSchema) Load(v any, options ...StructToPropertiesOption) error
 	if t.Kind() != reflect.Struct {
 		return fmt.Errorf("expected a struct type, got %s", t.Kind())
 	}
+	if err := validateLegacyFieldNames(t, options...); err != nil {
+		return err
+	}
 	properties, required := StructToProperties(t, options...)
 	s.Properties = properties
 	s.Required = required
@@ -374,6 +383,9 @@ func (s *ToolOutputSchema) Load(v any, options ...StructToPropertiesOption) erro
 	}
 	if t.Kind() != reflect.Struct {
 		return fmt.Errorf("expected a struct type, got %s", t.Kind())
+	}
+	if err := validateLegacyFieldNames(t, options...); err != nil {
+		return err
 	}
 	properties, required := StructToProperties(t, options...)
 	s.Properties = properties
