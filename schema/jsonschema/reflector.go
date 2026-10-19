@@ -45,7 +45,7 @@ func (r Reflector) Compile(request Request) (map[string]any, error) {
 		prefix = "#/properties/" + strings.ReplaceAll(strings.ReplaceAll(request.Property, "~", "~0"), "/", "~1") + "/$defs/"
 	}
 	compiler := reflectionCompiler{reflector: r, prefix: prefix, active: map[reflect.Type]string{}, objects: map[string]map[string]any{}, referenced: map[string]bool{}}
-	result, err := compiler.value(request.Type, request.Path)
+	result, err := compiler.value(request.Type, request.Path, false)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +72,17 @@ type reflectionCompiler struct {
 	referenced map[string]bool
 }
 
-func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any, error) {
+func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool) (map[string]any, error) {
 	if t == nil {
 		return nil, fmt.Errorf("JSON schema requires source type")
 	}
 	if t.Kind() == reflect.Pointer {
-		item, err := c.value(t.Elem(), path)
+		item, err := c.value(t.Elem(), path, inSlice)
 		if err != nil {
 			return nil, err
+		}
+		if inSlice {
+			return item, nil
 		}
 		if kind, ok := item["type"].(string); ok {
 			copy := map[string]any{}
@@ -92,7 +95,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		return map[string]any{"anyOf": []any{item, map[string]any{"type": "null"}}}, nil
 	}
 	if wire := c.reflector.WireTypes[t]; wire != nil {
-		return c.value(wire, path)
+		return c.value(wire, path, inSlice)
 	}
 	if fieldname.CustomJSON(t) {
 		yes, err := fieldname.HasNames(t, c.reflector.nameVisibility())
@@ -151,6 +154,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		if err := fieldname.Validate(entries); err != nil {
 			return nil, err
 		}
+		var required []string
 		for _, field := range fields {
 			// Retain owner visibility before interpreting authored naming.
 			if field.Field.Tag.Get("setMarker") == "true" || c.reflector.excludedJSONField(t, field.Field.Index) {
@@ -161,7 +165,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 			if path != "" {
 				fieldPath = path + "." + fieldPath
 			}
-			property, err := c.value(field.Field.ReflectedType, fieldPath)
+			property, err := c.value(field.Field.ReflectedType, fieldPath, false)
 			if err != nil {
 				return nil, fmt.Errorf("field %s: %w", fieldPath, err)
 			}
@@ -178,13 +182,16 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 				}
 			}
 			properties[name.Public] = property
+			if requiredField(t, field.Field.Index, field.Field.StructField()) {
+				required = append(required, name.Public)
+			}
+		}
+		if len(required) > 0 {
+			result["required"] = required
 		}
 		return result, nil
 	case reflect.Slice, reflect.Array:
-		if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
-			return map[string]any{"type": "string", "contentEncoding": "base64"}, nil
-		}
-		element, err := c.value(t.Elem(), path)
+		element, err := c.value(t.Elem(), path, true)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +205,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		default:
 			return nil, fmt.Errorf("map key %s is unsupported", t.Key())
 		}
-		value, err := c.value(t.Elem(), path)
+		value, err := c.value(t.Elem(), path, false)
 		if err != nil {
 			return nil, err
 		}
@@ -217,6 +224,21 @@ func (c *reflectionCompiler) value(t reflect.Type, path string) (map[string]any,
 		}
 	}
 	return nil, fmt.Errorf("source type %s is unsupported", t)
+}
+
+func requiredField(owner reflect.Type, index []int, field reflect.StructField) bool {
+	current := owner
+	for position, item := range index {
+		for current.Kind() == reflect.Pointer {
+			current = current.Elem()
+		}
+		selected := current.Field(item)
+		if position < len(index)-1 && fieldname.OptionalOwner(selected) {
+			return false
+		}
+		current = selected.Type
+	}
+	return fieldname.Required(field)
 }
 
 // excludedJSONField checks the canonical selected index, including promoted

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/viant/mcp-protocol/schema/fieldname"
 )
 
 // visitedTypes tracks types currently being processed to detect cyclic definitions.
@@ -328,14 +330,7 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		}
 		// Set the property in overall schema.
 		properties[fieldName] = fieldSchema
-		tag := string(field.Tag)
-		isOptional := strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
-		if isOptional {
-			continue
-		}
-		isRequiredValue, isRequired := field.Tag.Lookup("required")
-		isRequired = isRequiredValue == "true" || (isRequiredValue == "" && isRequired)
-		if (field.Type.Kind() != reflect.Ptr && !omitempty) || isRequired {
+		if fieldname.Required(field) {
 			required = append(required, fieldName)
 		}
 	}
