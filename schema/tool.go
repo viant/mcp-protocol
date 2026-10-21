@@ -6,17 +6,16 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/viant/mcp-protocol/schema/fieldname"
 )
 
-// visitedTypes tracks types currently being processed to detect cyclic definitions.
-var (
-	visitedMu    sync.Mutex
-	visitedTypes map[reflect.Type]bool
-)
+// Each compilation owns its recursion state. Another caller processing the same
+// type is not a cycle in this caller's schema.
+type schemaTraversal struct {
+	visited map[reflect.Type]bool
+}
 
 // buildJSONSchema constructs a JSON-schema fragment that represents the supplied Go reflect.Type.
 // The `inSlice` flag is an internal recursion marker: it is true when the type
@@ -25,36 +24,18 @@ var (
 // types) should be kept or suppressed.
 // It detects and breaks cycles in types, returning an empty object schema on recursion.
 func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
+	return (&schemaTraversal{visited: make(map[reflect.Type]bool)}).build(t, inSlice, opts...)
+}
+
+func (v *schemaTraversal) build(t reflect.Type, inSlice bool, opts ...StructToPropertiesOption) map[string]interface{} {
 	opts = customBoundaryOptions(t, opts)
 	schema := make(map[string]interface{})
 
-	// initialize cycle-detection state on outermost call
-	visitedMu.Lock()
-	first := visitedTypes == nil
-	if first {
-		visitedTypes = make(map[reflect.Type]bool)
-	}
-	// detect cyclic types: if this type is already being processed, break the cycle
-	if visitedTypes[t] {
-		visitedMu.Unlock()
-		if first {
-			visitedMu.Lock()
-			visitedTypes = nil
-			visitedMu.Unlock()
-		}
+	if v.visited[t] {
 		return map[string]interface{}{"type": "object"}
 	}
-	visitedTypes[t] = true
-	visitedMu.Unlock()
-
-	defer func() {
-		visitedMu.Lock()
-		delete(visitedTypes, t)
-		if first {
-			visitedTypes = nil
-		}
-		visitedMu.Unlock()
-	}()
+	v.visited[t] = true
+	defer delete(v.visited, t)
 
 	// Special handling for time.Time: treat as ISO 8601 string.
 	if t == reflect.TypeOf(time.Time{}) {
@@ -66,7 +47,7 @@ func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOpt
 	// Handle pointer types.
 	if t.Kind() == reflect.Ptr {
 		// Unwrap pointer.
-		schema = buildJSONSchema(t.Elem(), inSlice, opts...)
+		schema = v.build(t.Elem(), inSlice, opts...)
 		// Mark as nullable unless we are processing a slice element.
 		if !inSlice {
 			schema["nullable"] = true
@@ -90,19 +71,19 @@ func buildJSONSchema(t reflect.Type, inSlice bool, opts ...StructToPropertiesOpt
 	case reflect.Slice, reflect.Array:
 		schema["type"] = "array"
 		// When processing slice items, set inSlice = true.
-		schema["items"] = buildJSONSchema(t.Elem(), true, opts...)
+		schema["items"] = v.build(t.Elem(), true, opts...)
 	case reflect.Map:
 		schema["type"] = "object"
 		// Open-ended objects when the map value is interface{}.
 		if t.Elem().Kind() == reflect.Interface {
 			schema["additionalProperties"] = true
 		} else {
-			schema["additionalProperties"] = buildJSONSchema(t.Elem(), false, opts...)
+			schema["additionalProperties"] = v.build(t.Elem(), false, opts...)
 		}
 	case reflect.Struct:
 		// For structs, recursively convert their fields.
 		schema["type"] = "object"
-		properties, required := StructToProperties(t, opts...)
+		properties, required := v.properties(t, opts...)
 		schema["properties"] = properties
 		if len(required) > 0 {
 			schema["required"] = required
@@ -182,6 +163,10 @@ func WithNullableHook(hook func(field reflect.StructField) *bool) StructToProper
 // affecting their JSON encoding behavior.
 // It accepts optional StructToPropertiesOption to customize behavior (e.g., skipping fields, required logic, format overrides).
 func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolInputSchemaProperties, []string) {
+	return (&schemaTraversal{visited: make(map[reflect.Type]bool)}).properties(t, opts...)
+}
+
+func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesOption) (ToolInputSchemaProperties, []string) {
 	opts = customBoundaryOptions(t, opts)
 	var opt structToPropertiesOptions
 	for _, o := range opts {
@@ -247,7 +232,7 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 			}
 			// Only inline struct types.
 			if embeddedType.Kind() == reflect.Struct {
-				childProps, childReq := StructToProperties(embeddedType, opts...)
+				childProps, childReq := v.properties(embeddedType, opts...)
 				// Merge child properties into parent, without overwriting existing keys.
 				for k, v := range childProps {
 					if _, exists := properties[k]; !exists {
@@ -267,7 +252,7 @@ func StructToProperties(t reflect.Type, opts ...StructToPropertiesOption) (ToolI
 		}
 
 		// Generate the field's JSON schema.
-		fieldSchema := typeSchema(field.Type, opts...)
+		fieldSchema := v.build(field.Type, false, opts...)
 		// Determine format via hook or tag.
 		var fmtVal string
 		if opt.FormatHook != nil {
