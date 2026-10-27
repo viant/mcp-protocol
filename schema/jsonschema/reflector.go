@@ -165,7 +165,19 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool) (m
 			if path != "" {
 				fieldPath = path + "." + fieldPath
 			}
-			property, err := c.value(field.Field.ReflectedType, fieldPath, false)
+			property, declared, err := ScalarWireSchema(field.Field.StructField())
+			if declared && err == nil {
+				base := field.Field.ReflectedType
+				for base.Kind() == reflect.Pointer {
+					base = base.Elem()
+				}
+				if c.reflector.WireTypes[base] != nil {
+					err = fmt.Errorf("conflicting scalar and type wire authorities for %s", fieldPath)
+				}
+			}
+			if !declared {
+				property, err = c.value(field.Field.ReflectedType, fieldPath, false)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("field %s: %w", fieldPath, err)
 			}
