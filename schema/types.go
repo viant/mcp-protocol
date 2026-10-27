@@ -6002,7 +6002,7 @@ type ToolInputSchema struct {
 	// Type corresponds to the JSON schema field "type".
 	Type string `json:"type" yaml:"type" mapstructure:"type"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties interface{} `json:"-" yaml:"-" mapstructure:",remain"`
 }
 
 // ToolInputSchemaProperties preserves the root package's pre-July API while
@@ -6060,7 +6060,7 @@ type ToolOutputSchema struct {
 	// API. July output schemas may omit it.
 	Type string `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties interface{} `json:"-" yaml:"-" mapstructure:",remain"`
 }
 
 // Definition for a tool the client can call.
