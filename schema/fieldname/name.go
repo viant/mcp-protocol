@@ -85,7 +85,7 @@ func Validate(entries []Entry) error {
 	seen := map[string]int{}
 	explicit := false
 	for _, e := range entries {
-		explicit = explicit || e.Name.Explicit || len(e.Name.Aliases) > 0
+		explicit = explicit || e.Name.Explicit || len(e.Name.Aliases) > 0 || e.Name.Public != e.JSONName
 	}
 	if !explicit {
 		return nil

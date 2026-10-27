@@ -5,6 +5,10 @@ import "reflect"
 // Visibility carries the existing schema owner's selection policy to discovery
 // and invocation. Its zero value preserves ordinary native JSON visibility.
 type Visibility struct {
+	// FallbackName optionally maps the selected JSON fallback before explicit
+	// MCP names are resolved. Nil preserves existing field names.
+	FallbackName func(reflect.StructField, string) string
+
 	ExcludeInternal bool
 	ExcludeField    func(reflect.StructField) bool
 }
@@ -30,4 +34,12 @@ func selectedVisibility(options []Visibility) Visibility {
 		return options[0]
 	}
 	return Visibility{}
+}
+
+// Resolve applies a caller's fallback policy before explicitly authored MCP names.
+func (v Visibility) Resolve(field reflect.StructField, fallback string) (Name, error) {
+	if v.FallbackName != nil {
+		fallback = v.FallbackName(field, fallback)
+	}
+	return Resolve(field, fallback)
 }

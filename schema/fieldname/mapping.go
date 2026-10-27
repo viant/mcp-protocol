@@ -30,7 +30,7 @@ func Fields(t reflect.Type, visibility ...Visibility) ([]Entry, error) {
 		if f.Field.Tag.Get("setMarker") == "true" {
 			continue
 		}
-		n, e := Resolve(f.Field.StructField(), f.Name)
+		n, e := selectedVisibility(visibility).Resolve(f.Field.StructField(), f.Name)
 		if e != nil {
 			return nil, e
 		}
@@ -69,7 +69,9 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 		t = t.Elem()
 	}
 	if CustomJSON(t) {
-		yes, e := HasNames(t, visibility...)
+		explicit := selectedVisibility(visibility)
+		explicit.FallbackName = nil
+		yes, e := HasNames(t, explicit)
 		if e != nil {
 			return nil, e
 		}
@@ -166,35 +168,43 @@ func HasNames(t reflect.Type, visibility ...Visibility) (bool, error) {
 	if t == nil {
 		return false, fmt.Errorf("MCP field type is required")
 	}
-	seen := map[reflect.Type]bool{}
-	var visit func(reflect.Type) (bool, error)
-	visit = func(t reflect.Type) (bool, error) {
-		if seen[t] {
+	type visitKey struct {
+		typ       reflect.Type
+		formatted bool
+	}
+	seen := map[visitKey]bool{}
+	var visit func(reflect.Type, Visibility) (bool, error)
+	visit = func(t reflect.Type, policy Visibility) (bool, error) {
+		if CustomJSON(t) {
+			policy.FallbackName = nil
+		}
+		key := visitKey{t, policy.FallbackName != nil}
+		if seen[key] {
 			return false, nil
 		}
-		seen[t] = true
+		seen[key] = true
 		switch t.Kind() {
 		case reflect.Pointer, reflect.Array, reflect.Slice, reflect.Map:
-			return visit(t.Elem())
+			return visit(t.Elem(), policy)
 		}
 		if t.Kind() != reflect.Struct {
 			return false, nil
 		}
 
-		fields, e := Fields(t, visibility...)
+		fields, e := Fields(t, policy)
 		if e != nil {
 			return false, e
 		}
 		for _, f := range fields {
-			if f.Name.Explicit || len(f.Name.Aliases) > 0 {
+			if f.Name.Explicit || len(f.Name.Aliases) > 0 || f.Name.Public != f.JSONName {
 				return true, nil
 			}
-			yes, e := visit(f.Field.Type)
+			yes, e := visit(f.Field.Type, policy)
 			if e != nil || yes {
 				return yes, e
 			}
 		}
 		return false, nil
 	}
-	return visit(t)
+	return visit(t, selectedVisibility(visibility))
 }

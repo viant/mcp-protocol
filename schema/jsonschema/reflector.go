@@ -17,6 +17,10 @@ import (
 // Reflector uses X's encoding/json field projection; annotations cannot change
 // selection, Go identity, JSON names, or source types.
 type Reflector struct {
+	// FallbackName shares an owner-supplied naming policy with argument binding.
+	// Explicit MCP names remain authoritative.
+	FallbackName func(reflect.StructField, string) string
+
 	// WireTypes declares owner-authored canonical wire representations for custom
 	// JSON types. It never infers a contract or invokes custom marshal methods.
 	WireTypes map[reflect.Type]reflect.Type
@@ -97,6 +101,12 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool) (m
 	if wire := c.reflector.WireTypes[t]; wire != nil {
 		return c.value(wire, path, inSlice)
 	}
+	if fieldname.CustomJSON(t) && c.reflector.FallbackName != nil {
+		// Custom JSON owners keep their existing wire spelling and decoder.
+		scoped := *c
+		scoped.reflector.FallbackName = nil
+		return scoped.value(t, path, inSlice)
+	}
 	if fieldname.CustomJSON(t) {
 		yes, err := fieldname.HasNames(t, c.reflector.nameVisibility())
 		if err != nil {
@@ -143,7 +153,7 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool) (m
 			if field.Field.Tag.Get("setMarker") == "true" || c.reflector.excludedJSONField(t, field.Field.Index) {
 				continue
 			}
-			name, err := fieldname.Resolve(field.Field.StructField(), field.Name)
+			name, err := c.reflector.nameVisibility().Resolve(field.Field.StructField(), field.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -260,7 +270,7 @@ func (r Reflector) excludedJSONField(owner reflect.Type, index []int) bool {
 	return r.nameVisibility().Excluded(owner, index)
 }
 func (r Reflector) nameVisibility() fieldname.Visibility {
-	return fieldname.Visibility{ExcludeInternal: r.ExcludeInternal, ExcludeField: r.ExcludeField}
+	return fieldname.Visibility{ExcludeInternal: r.ExcludeInternal, ExcludeField: r.ExcludeField, FallbackName: r.FallbackName}
 }
 
 func validateWireTypes(authority map[reflect.Type]reflect.Type) error {
