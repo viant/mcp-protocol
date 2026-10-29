@@ -1,6 +1,9 @@
 package schema
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+)
 
 // MarshalJSON preserves the output schema vocabulary on the wire.
 func (s ToolOutputSchema) MarshalJSON() ([]byte, error) {
@@ -12,11 +15,11 @@ func (s ToolOutputSchema) MarshalJSON() ([]byte, error) {
 func (s *ToolOutputSchema) UnmarshalJSON(data []byte) error {
 	type plain ToolOutputSchema
 	var value plain
-	if err := json.Unmarshal(data, &value); err != nil {
+	if err := unmarshalToolSchemaJSON(data, &value); err != nil {
 		return err
 	}
 	var fields map[string]interface{}
-	if err := json.Unmarshal(data, &fields); err != nil {
+	if err := unmarshalToolSchemaJSON(data, &fields); err != nil {
 		return err
 	}
 	for _, key := range []string{"type", "properties", "required", "$schema"} {
@@ -33,7 +36,7 @@ func marshalToolSchema(value interface{}, extensions interface{}, authoritative 
 		return nil, err
 	}
 	var fields map[string]interface{}
-	if err := json.Unmarshal(data, &fields); err != nil {
+	if err := unmarshalToolSchemaJSON(data, &fields); err != nil {
 		return nil, err
 	}
 	if flag, ok := extensions.(bool); ok {
@@ -44,7 +47,7 @@ func marshalToolSchema(value interface{}, extensions interface{}, authoritative 
 			return nil, err
 		}
 		var extra map[string]interface{}
-		if err := json.Unmarshal(data, &extra); err != nil {
+		if err := unmarshalToolSchemaJSON(data, &extra); err != nil {
 			return nil, err
 		}
 		for _, key := range authoritative {
@@ -55,4 +58,15 @@ func marshalToolSchema(value interface{}, extensions interface{}, authoritative 
 		}
 	}
 	return json.Marshal(fields)
+}
+
+// Keep JSON Schema numeric vocabulary exact through inventory persistence.
+func unmarshalToolSchemaJSON(raw []byte, target interface{}) error {
+	if !json.Valid(raw) {
+		var value interface{}
+		return json.Unmarshal(raw, &value)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	return decoder.Decode(target)
 }

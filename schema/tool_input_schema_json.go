@@ -19,7 +19,7 @@ func (j ToolInputSchema) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	fields := map[string]interface{}{}
-	if err = json.Unmarshal(encoded, &fields); err != nil {
+	if err = unmarshalToolSchemaJSON(encoded, &fields); err != nil {
 		return nil, err
 	}
 	if j.AdditionalProperties != nil {

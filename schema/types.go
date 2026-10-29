@@ -6012,7 +6012,7 @@ type ToolInputSchemaProperties map[string]map[string]interface{}
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["type"]; raw != nil && !ok {
@@ -6020,7 +6020,7 @@ func (j *ToolInputSchema) UnmarshalJSON(value []byte) error {
 	}
 	type Plain ToolInputSchema
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	st := reflect.TypeOf(Plain{})

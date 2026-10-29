@@ -3,8 +3,8 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/viant/tagly/choice"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
@@ -276,14 +276,22 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 			fieldSchema["example"] = example
 		}
 
-		if choice := field.Tag.Get("choice"); choice != "" {
-			re := regexp.MustCompile(`choice:"([^"]+)"`)
-			matches := re.FindAllStringSubmatch(string(field.Tag), -1)
-			var choices []string
-			for _, match := range matches {
-				choices = append(choices, match[1])
+		constraint, choiceErr := choice.Parse(field.Tag, field.Type)
+		if choiceErr != nil {
+			// This legacy API has no error return. Fail closed on invalid metadata.
+			fieldSchema["not"] = map[string]interface{}{}
+		} else if constraint != nil {
+			if field.Type.Kind() == reflect.Pointer {
+				fieldSchema["enum"] = append(constraint.WireValues(), nil)
+			} else if constraint.Type.Kind() == reflect.String {
+				values := make([]string, len(constraint.Values))
+				for i, v := range constraint.Values {
+					values[i] = reflect.ValueOf(v).String()
+				}
+				fieldSchema["enum"] = values
+			} else {
+				fieldSchema["enum"] = constraint.WireValues()
 			}
-			fieldSchema["enum"] = choices
 		}
 
 		// Handle default values for primitive types via `default:"..."` tag.

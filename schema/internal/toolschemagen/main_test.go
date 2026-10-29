@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 )
@@ -25,5 +26,20 @@ func TestRewriteToolSchemaCarriers(t *testing.T) {
 func TestRewriteRejectsGeneratorShapeChange(t *testing.T) {
 	if _, err := rewrite([]byte("package schema")); err == nil {
 		t.Fatal("missing carriers accepted")
+	}
+}
+
+func TestSchemaDecodeUsesExactNumericAdapter(t *testing.T) {
+	source := []byte("package schema\nimport \"encoding/json\"\ntype ToolInputSchema struct { AdditionalProperties interface{} };type ToolOutputSchema struct { AdditionalProperties interface{} };func (j *ToolInputSchema) UnmarshalJSON(value []byte)error { var plain interface{};return json.Unmarshal(value,&plain) }\n")
+	result, err := rewrite(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(result, []byte("unmarshalToolSchemaJSON(value, &plain)")) {
+		t.Fatalf("root decoder did not retain exact schema vocabulary: %s", result)
+	}
+	again, err := rewrite(result)
+	if err != nil || !bytes.Equal(result, again) {
+		t.Fatalf("schema metadata generation not stable: %v", err)
 	}
 }

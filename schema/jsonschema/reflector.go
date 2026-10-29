@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/viant/mcp-protocol/schema/fieldname"
+	"github.com/viant/tagly/choice"
 	xshape "github.com/viant/x/shape"
 	"reflect"
 	"strings"
@@ -193,6 +194,44 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool) (m
 			}
 			if field.Quoted {
 				property = map[string]any{"type": "string"}
+			}
+			choiceType := field.Field.ReflectedType
+			choiceBase := choiceType
+			for choiceBase.Kind() == reflect.Pointer {
+				choiceBase = choiceBase.Elem()
+			}
+			if wire := c.reflector.WireTypes[choiceBase]; wire != nil {
+				choiceType = wire
+			}
+			constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)
+			if err != nil {
+				return nil, fmt.Errorf("field %s choices: %w", fieldPath, err)
+			}
+			if constraint != nil {
+				if field.Quoted {
+					return nil, fmt.Errorf("field %s choice cannot override quoted JSON wire type", fieldPath)
+				}
+				// A custom scalar's explicit JSON wire schema can differ from its
+				// Go kind. Never append contradictory typed choices to that schema.
+				compatible := false
+				switch types := property["type"].(type) {
+				case string:
+					compatible = types == constraint.JSONType()
+				case []string:
+					for _, name := range types {
+						if name == constraint.JSONType() {
+							compatible = true
+						}
+					}
+				}
+				if declared && !compatible {
+					return nil, fmt.Errorf("field %s choice type conflicts with explicit scalar wire schema", fieldPath)
+				}
+				values := constraint.WireValues()
+				if field.Field.ReflectedType.Kind() == reflect.Pointer {
+					values = append(values, nil)
+				}
+				property["enum"] = values
 			}
 			if c.reflector.Annotate != nil {
 				description, example := c.reflector.Annotate(fieldPath, field.Field.StructField())

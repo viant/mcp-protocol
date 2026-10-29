@@ -247,3 +247,9 @@ This project is maintained by [Viant](https://github.com/viant).
 ## License
 
 Apache License 2.0. See the LICENSE file in the project root.
+
+Ordered scalar `choice` field metadata is parsed through Tagly. Schema reflection
+retains declared types, order and exact integer values. It does not validate tool
+arguments. Root tool schema JSON adapters preserve numeric vocabulary through
+inventory round trips using `json.Number`; consumers of untyped numeric schema
+values should handle that standard representation.

@@ -52,6 +52,37 @@ func rewrite(data []byte) ([]byte, error) {
 	if found != 2 {
 		return nil, fmt.Errorf("expected two tool schema extension carriers, found %d", found)
 	}
+	// Generated root input-schema decoding shares the inventory adapter's exact
+	// numeric vocabulary; official versioned schema snapshots remain pristine.
+	for _, declaration := range file.Decls {
+		fn, ok := declaration.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "UnmarshalJSON" || fn.Recv == nil || len(fn.Recv.List) != 1 {
+			continue
+		}
+		pointer, ok := fn.Recv.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			continue
+		}
+		owner, ok := pointer.X.(*ast.Ident)
+		if !ok || owner.Name != "ToolInputSchema" {
+			continue
+		}
+		ast.Inspect(fn.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			packageName, ok := selector.X.(*ast.Ident)
+			if ok && packageName.Name == "json" && selector.Sel.Name == "Unmarshal" {
+				call.Fun = ast.NewIdent("unmarshalToolSchemaJSON")
+			}
+			return true
+		})
+	}
 	var output strings.Builder
 	if err := format.Node(&output, set, file); err != nil {
 		return nil, err
