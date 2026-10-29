@@ -60,7 +60,7 @@ func marshalToolSchema(value interface{}, extensions interface{}, authoritative 
 	return json.Marshal(fields)
 }
 
-// Keep arbitrary JSON numbers exact through tool calls and schema persistence.
+// Keep arbitrary JSON numbers exact through schema persistence.
 func unmarshalToolSchemaJSON(raw []byte, target interface{}) error {
 	if !json.Valid(raw) {
 		var value interface{}

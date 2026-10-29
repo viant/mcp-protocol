@@ -256,19 +256,12 @@ values should handle that standard representation.
 
 ### Tool-call JSON numbers
 
-Tool-call generic payloads retain legacy `float64` leaves when marshaling that
-float produces exactly the same decimal JSON value and integral values remain within the
-safe range ±(2^53−1) (for example `7`, `0.1`, and
-`1e3`). Other numbers remain `encoding/json.Number`, including large integers,
-high precision decimals, overflow and underflow. Numeric values never become
-strings. Equivalent spelling may normalize, such as `1e3` to `1000`.
+Generic tool-call argument and result values use standard `encoding/json`
+decoding: numeric leaves are `float64`, including large integers and precise
+decimals. Large numbers may round, tiny exponents may underflow to zero, and
+float64 overflow is rejected. Trailing or malformed JSON is rejected.
 
-Applications must handle `json.Number` for values that cannot safely round-trip
-through float64 JSON; universal float64 assertions cannot preserve those values.
-Declared numeric fields and request IDs keep their existing types. Schema enum
-and schema extension decoding continues to preserve exact `json.Number` values.
-Malformed or trailing JSON remains rejected.
-
-The exact-number guarantee covers tool-call payloads, not arbitrary numeric
-`_meta` extensions: the existing `RequestMetaObject` extension marshal/unmarshal
-uses ordinary `json.Unmarshal` and may round such extension values.
+Declared numeric fields and envelope IDs retain their existing typed decoding.
+Schema enums and schema vocabulary continue to preserve exact `json.Number`
+values; this exact schema handling does not extend to generic tool payloads.
+Applications requiring exact business identifiers should use string fields.

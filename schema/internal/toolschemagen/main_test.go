@@ -44,38 +44,15 @@ func TestSchemaDecodeUsesExactNumericAdapter(t *testing.T) {
 	}
 }
 
-func TestToolCallDecodeUsesExactNumericAdapter(t *testing.T) {
+func TestToolCallDecoderRemainsStandardJSON(t *testing.T) {
 	for _, owner := range []string{"CallToolRequestParams", "CallToolRequest", "CallToolResult", "CallToolResultResponse", "CallToolResultResponseResult"} {
-		t.Run(owner, func(t *testing.T) {
-			source := []byte("package schema\nimport \"encoding/json\"\ntype ToolInputSchema struct { AdditionalProperties interface{} };type ToolOutputSchema struct { AdditionalProperties interface{} };type " + owner + " struct{};func (j *" + owner + ") UnmarshalJSON(value []byte)error { var plain interface{};return json.Unmarshal(value,&plain) }\n")
-			result, err := rewrite(source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Contains(result, []byte("unmarshalToolSchemaJSON(value, &plain)")) {
-				t.Fatalf("tool call decoder is not exact: %s", result)
-			}
-			again, err := rewrite(result)
-			if err != nil || !bytes.Equal(result, again) {
-				t.Fatalf("tool call generation not stable: %v", err)
-			}
-		})
-	}
-}
-
-func TestToolCallNormalizationIsRegeneratedAndStable(t *testing.T) {
-	for _, owner := range []string{"CallToolRequestParams", "CallToolResult", "CallToolResultResponseResult"} {
-		source := []byte("package schema\ntype ToolInputSchema struct{AdditionalProperties interface{}};type ToolOutputSchema struct{AdditionalProperties interface{}};type " + owner + " struct{};func(j *" + owner + ")UnmarshalJSON(value []byte)error{type Plain " + owner + ";var plain Plain;*j=" + owner + "(plain);return nil}")
+		source := []byte("package schema\nimport \"encoding/json\"\ntype ToolInputSchema struct{AdditionalProperties interface{}};type ToolOutputSchema struct{AdditionalProperties interface{}};type " + owner + " struct{};func(j *" + owner + ")UnmarshalJSON(raw []byte)error{var value interface{};return json.Unmarshal(raw,&value)}")
 		result, err := rewrite(source)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bytes.Count(result, []byte("normalizeToolCallNumbers(j)")) != 1 {
-			t.Fatalf("normalization missing: %s", result)
-		}
-		again, err := rewrite(result)
-		if err != nil || !bytes.Equal(result, again) {
-			t.Fatalf("normalization not stable: %v", err)
+		if !bytes.Contains(result, []byte("json.Unmarshal(raw, &value)")) {
+			t.Fatalf("tool call decoding changed: %s", result)
 		}
 	}
 }
