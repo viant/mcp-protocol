@@ -62,3 +62,20 @@ func TestToolCallDecodeUsesExactNumericAdapter(t *testing.T) {
 		})
 	}
 }
+
+func TestToolCallNormalizationIsRegeneratedAndStable(t *testing.T) {
+	for _, owner := range []string{"CallToolRequestParams", "CallToolResult", "CallToolResultResponseResult"} {
+		source := []byte("package schema\ntype ToolInputSchema struct{AdditionalProperties interface{}};type ToolOutputSchema struct{AdditionalProperties interface{}};type " + owner + " struct{};func(j *" + owner + ")UnmarshalJSON(value []byte)error{type Plain " + owner + ";var plain Plain;*j=" + owner + "(plain);return nil}")
+		result, err := rewrite(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Count(result, []byte("normalizeToolCallNumbers(j)")) != 1 {
+			t.Fatalf("normalization missing: %s", result)
+		}
+		again, err := rewrite(result)
+		if err != nil || !bytes.Equal(result, again) {
+			t.Fatalf("normalization not stable: %v", err)
+		}
+	}
+}

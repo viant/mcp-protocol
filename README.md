@@ -256,15 +256,19 @@ values should handle that standard representation.
 
 ### Tool-call JSON numbers
 
-The maintained root `schema` package preserves JSON numeric tokens in tool call
-arguments, input responses, and structured results, including nested objects and
-arrays. The request and response envelope decoders share the same strict,
-number-preserving decoder used for tool schemas; trailing JSON values or malformed
-input are rejected. Versioned schema snapshots retain their existing behavior.
+Tool-call generic payloads retain legacy `float64` leaves when marshaling that
+float produces exactly the same decimal JSON value and integral values remain within the
+safe range ±(2^53−1) (for example `7`, `0.1`, and
+`1e3`). Other numbers remain `encoding/json.Number`, including large integers,
+high precision decimals, overflow and underflow. Numeric values never become
+strings. Equivalent spelling may normalize, such as `1e3` to `1000`.
 
-Go callers inspecting these decoded interface values receive `json.Number`
-instead of `float64`, including for small integers. Re-marshalling produces JSON
-numbers with their original precision, not strings. Convert using `Int64`,
-`Float64`, or `strconv.ParseUint(number.String(), 10, 64)` as appropriate for the
-application's declared type. Float conversion can lose precision. Typed numeric
-fields and JSON null, string, boolean, object, and array shapes are unchanged.
+Applications must handle `json.Number` for values that cannot safely round-trip
+through float64 JSON; universal float64 assertions cannot preserve those values.
+Declared numeric fields and request IDs keep their existing types. Schema enum
+and schema extension decoding continues to preserve exact `json.Number` values.
+Malformed or trailing JSON remains rejected.
+
+The exact-number guarantee covers tool-call payloads, not arbitrary numeric
+`_meta` extensions: the existing `RequestMetaObject` extension marshal/unmarshal
+uses ordinary `json.Unmarshal` and may round such extension values.

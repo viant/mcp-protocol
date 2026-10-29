@@ -342,6 +342,7 @@ func (j *CallToolRequestParams) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	*j = CallToolRequestParams(plain)
+	normalizeToolCallNumbers(j)
 	return nil
 }
 
@@ -506,6 +507,7 @@ func (j *CallToolResultResponseResult) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	*j = CallToolResultResponseResult(plain)
+	normalizeToolCallNumbers(j)
 	return nil
 }
 
@@ -556,6 +558,7 @@ func (j *CallToolResult) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	*j = CallToolResult(plain)
+	normalizeToolCallNumbers(j)
 	return nil
 }
 

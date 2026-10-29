@@ -72,6 +72,37 @@ func rewrite(data []byte) ([]byte, error) {
 		default:
 			continue
 		}
+		if owner.Name == "CallToolRequestParams" || owner.Name == "CallToolResult" || owner.Name == "CallToolResultResponseResult" {
+			normalized := false
+			for _, statement := range fn.Body.List {
+				expression, ok := statement.(*ast.ExprStmt)
+				if !ok {
+					continue
+				}
+				call, ok := expression.X.(*ast.CallExpr)
+				if !ok {
+					continue
+				}
+				name, ok := call.Fun.(*ast.Ident)
+				if ok && name.Name == "normalizeToolCallNumbers" {
+					normalized = true
+				}
+			}
+			if !normalized {
+				for index, statement := range fn.Body.List {
+					assignment, ok := statement.(*ast.AssignStmt)
+					if !ok || len(assignment.Lhs) != 1 {
+						continue
+					}
+					if _, ok := assignment.Lhs[0].(*ast.StarExpr); !ok {
+						continue
+					}
+					normalization := &ast.ExprStmt{X: &ast.CallExpr{Fun: ast.NewIdent("normalizeToolCallNumbers"), Args: []ast.Expr{ast.NewIdent("j")}}}
+					fn.Body.List = append(fn.Body.List[:index+1], append([]ast.Stmt{normalization}, fn.Body.List[index+1:]...)...)
+					break
+				}
+			}
+		}
 		ast.Inspect(fn.Body, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
 			if !ok {
