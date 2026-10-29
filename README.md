@@ -253,3 +253,18 @@ retains declared types, order and exact integer values. It does not validate too
 arguments. Root tool schema JSON adapters preserve numeric vocabulary through
 inventory round trips using `json.Number`; consumers of untyped numeric schema
 values should handle that standard representation.
+
+### Tool-call JSON numbers
+
+The maintained root `schema` package preserves JSON numeric tokens in tool call
+arguments, input responses, and structured results, including nested objects and
+arrays. The request and response envelope decoders share the same strict,
+number-preserving decoder used for tool schemas; trailing JSON values or malformed
+input are rejected. Versioned schema snapshots retain their existing behavior.
+
+Go callers inspecting these decoded interface values receive `json.Number`
+instead of `float64`, including for small integers. Re-marshalling produces JSON
+numbers with their original precision, not strings. Convert using `Int64`,
+`Float64`, or `strconv.ParseUint(number.String(), 10, 64)` as appropriate for the
+application's declared type. Float conversion can lose precision. Typed numeric
+fields and JSON null, string, boolean, object, and array shapes are unchanged.

@@ -52,8 +52,8 @@ func rewrite(data []byte) ([]byte, error) {
 	if found != 2 {
 		return nil, fmt.Errorf("expected two tool schema extension carriers, found %d", found)
 	}
-	// Generated root input-schema decoding shares the inventory adapter's exact
-	// numeric vocabulary; official versioned schema snapshots remain pristine.
+	// Generated tool schema and call decoding share the exact JSON number adapter;
+	// official versioned schema snapshots remain pristine.
 	for _, declaration := range file.Decls {
 		fn, ok := declaration.(*ast.FuncDecl)
 		if !ok || fn.Name.Name != "UnmarshalJSON" || fn.Recv == nil || len(fn.Recv.List) != 1 {
@@ -64,7 +64,12 @@ func rewrite(data []byte) ([]byte, error) {
 			continue
 		}
 		owner, ok := pointer.X.(*ast.Ident)
-		if !ok || owner.Name != "ToolInputSchema" {
+		if !ok {
+			continue
+		}
+		switch owner.Name {
+		case "ToolInputSchema", "CallToolRequestParams", "CallToolRequest", "CallToolResult", "CallToolResultResponse", "CallToolResultResponseResult":
+		default:
 			continue
 		}
 		ast.Inspect(fn.Body, func(node ast.Node) bool {

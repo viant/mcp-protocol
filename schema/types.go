@@ -327,7 +327,7 @@ type CallToolRequestParams struct {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolRequestParams) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["_meta"]; raw != nil && !ok {
@@ -338,7 +338,7 @@ func (j *CallToolRequestParams) UnmarshalJSON(value []byte) error {
 	}
 	type Plain CallToolRequestParams
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	*j = CallToolRequestParams(plain)
@@ -348,7 +348,7 @@ func (j *CallToolRequestParams) UnmarshalJSON(value []byte) error {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolRequest) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["id"]; raw != nil && !ok {
@@ -365,7 +365,7 @@ func (j *CallToolRequest) UnmarshalJSON(value []byte) error {
 	}
 	type Plain CallToolRequest
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	*j = CallToolRequest(plain)
@@ -485,7 +485,7 @@ type CallToolResultResponseResult struct {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolResultResponseResult) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	var callToolResultResponseResult_0 CallToolResultResponseResult_0
@@ -502,7 +502,7 @@ func (j *CallToolResultResponseResult) UnmarshalJSON(value []byte) error {
 	}
 	type Plain CallToolResultResponseResult
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	*j = CallToolResultResponseResult(plain)
@@ -512,7 +512,7 @@ func (j *CallToolResultResponseResult) UnmarshalJSON(value []byte) error {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolResultResponse) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["id"]; raw != nil && !ok {
@@ -526,7 +526,7 @@ func (j *CallToolResultResponse) UnmarshalJSON(value []byte) error {
 	}
 	type Plain CallToolResultResponse
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	*j = CallToolResultResponse(plain)
@@ -536,7 +536,7 @@ func (j *CallToolResultResponse) UnmarshalJSON(value []byte) error {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CallToolResult) UnmarshalJSON(value []byte) error {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(value, &raw); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &raw); err != nil {
 		return err
 	}
 	resultType, _ := raw["resultType"].(string)
@@ -552,7 +552,7 @@ func (j *CallToolResult) UnmarshalJSON(value []byte) error {
 	}
 	type Plain CallToolResult
 	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
+	if err := unmarshalToolSchemaJSON(value, &plain); err != nil {
 		return err
 	}
 	*j = CallToolResult(plain)

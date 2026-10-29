@@ -43,3 +43,22 @@ func TestSchemaDecodeUsesExactNumericAdapter(t *testing.T) {
 		t.Fatalf("schema metadata generation not stable: %v", err)
 	}
 }
+
+func TestToolCallDecodeUsesExactNumericAdapter(t *testing.T) {
+	for _, owner := range []string{"CallToolRequestParams", "CallToolRequest", "CallToolResult", "CallToolResultResponse", "CallToolResultResponseResult"} {
+		t.Run(owner, func(t *testing.T) {
+			source := []byte("package schema\nimport \"encoding/json\"\ntype ToolInputSchema struct { AdditionalProperties interface{} };type ToolOutputSchema struct { AdditionalProperties interface{} };type " + owner + " struct{};func (j *" + owner + ") UnmarshalJSON(value []byte)error { var plain interface{};return json.Unmarshal(value,&plain) }\n")
+			result, err := rewrite(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Contains(result, []byte("unmarshalToolSchemaJSON(value, &plain)")) {
+				t.Fatalf("tool call decoder is not exact: %s", result)
+			}
+			again, err := rewrite(result)
+			if err != nil || !bytes.Equal(result, again) {
+				t.Fatalf("tool call generation not stable: %v", err)
+			}
+		})
+	}
+}
