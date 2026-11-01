@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -128,5 +129,20 @@ func TestToolErrorHTTPStatusDoesNotRoundFractionalWireMetadata(t *testing.T) {
 			require.Equal(t, test.valid, valid)
 			require.Equal(t, test.want, status)
 		})
+	}
+}
+
+func TestToolErrorHTTPStatusBoundsUntrustedNumberConversion(t *testing.T) {
+	failed := true
+	for _, number := range []string{"403e999999999", "403e-999999999", "1e1000000", "403." + strings.Repeat("0", 61), "403e" + strings.Repeat("0", 61)} {
+		result := &CallToolResult{IsError: &failed, Meta: &ResultMetaObject{AdditionalProperties: map[string]any{ToolErrorHTTPStatusMetaKey: json.Number(number)}}}
+		_, valid := ToolErrorHTTPStatus(result)
+		require.False(t, valid, "untrusted status metadata must be bounded before exact conversion")
+	}
+	for _, number := range []string{"403e0", "4.03e2", "403." + strings.Repeat("0", 60)} {
+		result := &CallToolResult{IsError: &failed, Meta: &ResultMetaObject{AdditionalProperties: map[string]any{ToolErrorHTTPStatusMetaKey: json.Number(number)}}}
+		status, valid := ToolErrorHTTPStatus(result)
+		require.True(t, valid)
+		require.Equal(t, 403, status)
 	}
 }

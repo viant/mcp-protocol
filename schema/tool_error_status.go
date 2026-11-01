@@ -11,6 +11,10 @@ import (
 // It classifies a tool failure only; it never grants access or replaces isError.
 const ToolErrorHTTPStatusMetaKey = "io.viant/http-status"
 
+// A three-digit status needs only a short numeric representation. This bound
+// applies to optional metadata lexemes, before any arbitrary-precision work.
+const maxToolErrorHTTPStatusNumberBytes = 64
+
 // SetToolErrorHTTPStatus attaches a typed 400–599 status to an error result.
 // Metadata is copied so unrelated results sharing it remain unchanged. Explicit
 // content, structuredContent, server identity and other extensions are retained.
@@ -75,6 +79,13 @@ func ToolErrorHTTPStatus(result *CallToolResult) (int, bool) {
 	case float64:
 		number = value
 	case json.Number:
+		if len(value.String()) == 0 || len(value.String()) > maxToolErrorHTTPStatusNumberBytes {
+			return 0, false
+		}
+		approximate, err := value.Float64()
+		if err != nil || approximate < 400 || approximate > 599 {
+			return 0, false
+		}
 		if !json.Valid([]byte(value.String())) {
 			return 0, false
 		}
