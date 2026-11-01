@@ -71,3 +71,62 @@ func mustStatusJSON(t *testing.T, value any) []byte {
 	require.NoError(t, err)
 	return raw
 }
+
+func TestToolErrorHTTPStatusChecksExactJSONNumberBoundaries(t *testing.T) {
+	failed := true
+	for _, test := range []struct {
+		value string
+		want  int
+		valid bool
+	}{
+		{"403.00000000000000001", 0, false},
+		{"402.99999999999999999", 0, false},
+		{"599.00000000000000001", 0, false},
+		{"403e0", 403, true},
+		{"4.03e2", 403, true},
+		{"403.00000000000000000", 403, true},
+		{"5.99e2", 599, true},
+		{"NaN", 0, false}, {"Inf", 0, false}, {"-Inf", 0, false},
+		{"403/1", 0, false}, {`"403"`, 0, false},
+	} {
+		t.Run(test.value, func(t *testing.T) {
+			result := &CallToolResult{IsError: &failed, Meta: &ResultMetaObject{AdditionalProperties: map[string]any{ToolErrorHTTPStatusMetaKey: json.Number(test.value)}}}
+			status, valid := ToolErrorHTTPStatus(result)
+			require.Equal(t, test.valid, valid)
+			require.Equal(t, test.want, status)
+		})
+	}
+}
+
+func TestToolErrorHTTPStatusDoesNotRoundFractionalWireMetadata(t *testing.T) {
+	for _, test := range []struct {
+		number string
+		want   int
+		valid  bool
+	}{
+		{"403", 403, true}, {"403e0", 403, true}, {"4.03e2", 403, true},
+		{"403.00000000000000001", 0, false}, {"402.99999999999999999", 0, false},
+		{`"403"`, 0, false}, {"403.25", 0, false},
+	} {
+		t.Run(test.number, func(t *testing.T) {
+			raw := []byte(`{"content":[],"isError":true,"resultType":"complete","_meta":{"io.viant/http-status":` + test.number + `,"example/number":7.25,"example/rounded":403.00000000000000001,"io.modelcontextprotocol/serverInfo":{"name":"fixture","version":"1"}}}`)
+			var result CallToolResult
+			require.NoError(t, json.Unmarshal(raw, &result))
+			status, valid := ToolErrorHTTPStatus(&result)
+			require.Equal(t, test.valid, valid)
+			require.Equal(t, test.want, status)
+			extras := result.Meta.AdditionalProperties.(map[string]any)
+			require.IsType(t, float64(0), extras["example/number"], "unrelated metadata retains its existing numeric representation")
+			require.Equal(t, float64(7.25), extras["example/number"])
+			require.Equal(t, float64(403), extras["example/rounded"], "only the new status key changes decode behavior")
+			require.Equal(t, &Implementation{Name: "fixture", Version: "1"}, result.Meta.IoModelcontextprotocolServerInfo)
+			wire, err := json.Marshal(result)
+			require.NoError(t, err)
+			var again CallToolResult
+			require.NoError(t, json.Unmarshal(wire, &again))
+			status, valid = ToolErrorHTTPStatus(&again)
+			require.Equal(t, test.valid, valid)
+			require.Equal(t, test.want, status)
+		})
+	}
+}

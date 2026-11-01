@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -43,7 +44,14 @@ func (m *ResultMetaObject) UnmarshalJSON(data []byte) error {
 		extras := map[string]interface{}{}
 		for key, raw := range fields {
 			var value interface{}
-			if err := json.Unmarshal(raw, &value); err != nil {
+			if key == ToolErrorHTTPStatusMetaKey {
+				// This typed extension must reject fractions before float rounding.
+				decoder := json.NewDecoder(bytes.NewReader(raw))
+				decoder.UseNumber()
+				if err := decoder.Decode(&value); err != nil {
+					return err
+				}
+			} else if err := json.Unmarshal(raw, &value); err != nil {
 				return err
 			}
 			extras[key] = value

@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"math"
+	"math/big"
 )
 
 // ToolErrorHTTPStatusMetaKey is an optional Viant extension, not an MCP standard.
@@ -74,11 +75,18 @@ func ToolErrorHTTPStatus(result *CallToolResult) (int, bool) {
 	case float64:
 		number = value
 	case json.Number:
-		parsed, err := value.Float64()
-		if err != nil {
+		if !json.Valid([]byte(value.String())) {
 			return 0, false
 		}
-		number = parsed
+		exact, ok := new(big.Rat).SetString(value.String())
+		if !ok || !exact.IsInt() || !exact.Num().IsInt64() {
+			return 0, false
+		}
+		status := exact.Num().Int64()
+		if status < 400 || status > 599 {
+			return 0, false
+		}
+		return int(status), true
 	default:
 		return 0, false
 	}
