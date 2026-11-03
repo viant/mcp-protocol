@@ -175,6 +175,15 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 
 	properties := make(ToolInputSchemaProperties)
 	var required []string
+	requiredNames := make(map[string]bool)
+	addRequired := func(names ...string) {
+		for _, name := range names {
+			if !requiredNames[name] {
+				requiredNames[name] = true
+				required = append(required, name)
+			}
+		}
+	}
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
@@ -244,7 +253,7 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 				tag := string(field.Tag)
 				isOptional := strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
 				if !isPtr && !omitempty && !isOptional {
-					required = append(required, childReq...)
+					addRequired(childReq...)
 				}
 				// Done handling this field.
 				continue
@@ -324,7 +333,7 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 		// Set the property in overall schema.
 		properties[fieldName] = fieldSchema
 		if fieldname.Required(field) {
-			required = append(required, fieldName)
+			addRequired(fieldName)
 		}
 	}
 
