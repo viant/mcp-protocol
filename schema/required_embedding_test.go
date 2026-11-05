@@ -8,23 +8,23 @@ import (
 )
 
 type RequiredBase struct {
-	Key      string `json:"key"`
-	Endpoint string `json:"endpoint"`
+	Key      string `json:"key" required:"true"`
+	Endpoint string `json:"endpoint" required:"true"`
 }
 
 type RequiredEmbeddedFirst struct {
 	RequiredBase
-	Key string `json:"key"`
+	Key string `json:"key" required:"true"`
 }
 
 type RequiredDirectFirst struct {
-	Key string `json:"key"`
+	Key string `json:"key" required:"true"`
 	RequiredBase
 }
 
 type RequiredInline struct {
 	Base RequiredBase `json:",inline"`
-	Key  string       `json:"key"`
+	Key  string       `json:"key" required:"true"`
 }
 
 func TestRequiredFieldsRemainUniqueAcrossEmbedding(t *testing.T) {

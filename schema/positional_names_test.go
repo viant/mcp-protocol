@@ -52,7 +52,7 @@ func TestPositionalTwoFieldsAndDefaults(t *testing.T) {
 	require.Contains(t, legacy, "IanaTimezoneStr")
 	require.Empty(t, req)
 	type requiredName struct {
-		Value string `json:"value" mcp:"Value"`
+		Value string `json:"value" mcp:"Value" required:"true"`
 	}
 	_, required := schema.StructToProperties(reflect.TypeFor[requiredName]())
 	require.Equal(t, []string{"Value"}, required)
@@ -112,7 +112,7 @@ func TestCollisionFallbackAndLoad(t *testing.T) {
 	p, req := schema.StructToProperties(reflect.TypeFor[collision]())
 	require.Contains(t, p, "a")
 	require.Contains(t, p, "b")
-	require.ElementsMatch(t, []string{"a", "b"}, req)
+	require.Empty(t, req)
 	_, e := (jsonschema.Reflector{}).Compile(jsonschema.Request{Type: reflect.TypeFor[collision]()})
 	require.ErrorContains(t, e, "conflicts")
 	var s schema.ToolInputSchema
@@ -144,7 +144,7 @@ func TestRecursiveAndSharedDoNotContaminate(t *testing.T) {
 }
 
 type customNamed struct {
-	Value string `json:"value" mcp:"Value"`
+	Value string `json:"value" mcp:"Value" required:"true"`
 }
 
 func (*customNamed) UnmarshalJSON([]byte) error { return nil }
@@ -189,7 +189,7 @@ func TestAtomicLegacyAliasCollisionAndSwap(t *testing.T) {
 	require.Contains(t, p, "b")
 	require.Contains(t, p, "c")
 	require.NotContains(t, p, "C")
-	require.ElementsMatch(t, []string{"a", "b", "c"}, req)
+	require.Empty(t, req)
 	type swap struct {
 		A string `json:"a" mcp:"b"`
 		B int    `json:"b" mcp:"a"`
@@ -200,7 +200,7 @@ func TestAtomicLegacyAliasCollisionAndSwap(t *testing.T) {
 }
 func TestReviewPromotedMapAndSpellingCollisions(t *testing.T) {
 	type Embedded struct {
-		Value string `json:"value" mcp:"Value"`
+		Value string `json:"value" mcp:"Value" required:"true"`
 	}
 	type input struct {
 		Embedded

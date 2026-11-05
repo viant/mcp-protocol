@@ -250,9 +250,7 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 				}
 				// Propagate requireds only if this embedded field itself is required
 				// (i.e., not a pointer, not omitempty, and not explicitly optional).
-				tag := string(field.Tag)
-				isOptional := strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
-				if !isPtr && !omitempty && !isOptional {
+				if !isPtr && !omitempty && !fieldname.OptionalOwner(field) {
 					addRequired(childReq...)
 				}
 				// Done handling this field.

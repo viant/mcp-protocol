@@ -11,7 +11,7 @@ import (
 
 type fallbackChild struct{ MetricID int }
 type fallbackBody struct {
-	RecordID int
+	RecordID int `required:"true"`
 	Children []fallbackChild
 	Explicit string `json:"Exact_Name"`
 	Named    int    `mcp:"AccountingId"`

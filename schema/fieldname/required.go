@@ -5,17 +5,15 @@ import (
 	"strings"
 )
 
-// Required reports the legacy MCP schema requiredness of one selected JSON
-// field. It is schema metadata only; runtime validation is owned elsewhere.
+// Required reports explicitly authored requiredness. Go value kinds and JSON
+// omission flags do not imply required presence. Runtime validation is separate.
 func Required(field reflect.StructField) bool {
-	tag := string(field.Tag)
-	if strings.Contains(tag, "required=false") || strings.Contains(tag, "optional") {
+	if explicitlyOptional(field.Tag) {
 		return false
 	}
-	_, omitempty := jsonOption(field, "omitempty")
 	value, explicit := field.Tag.Lookup("required")
 	explicit = value == "true" || (value == "" && explicit)
-	return (field.Type.Kind() != reflect.Pointer && !omitempty) || explicit
+	return explicit
 }
 
 // OptionalOwner reports whether a legacy inline embedding suppresses the
@@ -28,8 +26,17 @@ func OptionalOwner(field reflect.StructField) bool {
 	if _, ok := jsonOption(field, "omitempty"); ok {
 		return true
 	}
-	tag := string(field.Tag)
-	return strings.Contains(tag, "required=false") || strings.Contains(tag, "optional")
+	return explicitlyOptional(field.Tag)
+}
+
+func explicitlyOptional(tag reflect.StructTag) bool {
+	if value, ok := tag.Lookup("optional"); ok && value != "false" {
+		return true
+	}
+	if value, ok := tag.Lookup("required"); ok && value == "false" {
+		return true
+	}
+	return strings.Contains(string(tag), "required=false")
 }
 
 func jsonOption(field reflect.StructField, want string) (string, bool) {

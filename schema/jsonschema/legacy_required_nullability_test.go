@@ -8,7 +8,7 @@ import (
 )
 
 type flightID struct {
-	IDs []int
+	IDs []int `required:"true"`
 }
 type flightDelete struct {
 	ID *flightID
@@ -24,12 +24,12 @@ type requiredControls struct {
 }
 
 type recursiveRequired struct {
-	IDs  []int              `json:"ids"`
+	IDs  []int              `json:"ids" required:"true"`
 	Next *recursiveRequired `json:"next,omitempty"`
 }
 
 type requiredEmbed struct {
-	ID int `json:"id" mcp:"identifier"`
+	ID int `json:"id" mcp:"identifier" required:"true"`
 }
 type aliasesAndVisibility struct {
 	requiredEmbed `json:",inline"`
@@ -72,8 +72,8 @@ func TestLegacyRequiredTagControlsAndAliasedVisibility(t *testing.T) {
 	if !reflect.DeepEqual(got["required"], legacyRequired) {
 		t.Fatalf("modern required = %#v; legacy required = %#v", got["required"], legacyRequired)
 	}
-	if !reflect.DeepEqual(got["required"], []string{"plain", "notReq", "forced"}) {
-		t.Fatalf("required = %#v; want legacy parity [plain notReq forced]", got["required"])
+	if !reflect.DeepEqual(got["required"], []string{"forced"}) {
+		t.Fatalf("required = %#v; want explicit requirement [forced]", got["required"])
 	}
 	aliased, err := (Reflector{ExcludeInternal: true}).Compile(Request{Type: reflect.TypeFor[aliasesAndVisibility]()})
 	if err != nil {

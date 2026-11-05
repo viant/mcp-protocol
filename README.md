@@ -265,3 +265,15 @@ Declared numeric fields and envelope IDs retain their existing typed decoding.
 Schema enums and schema vocabulary continue to preserve exact `json.Number`
 values; this exact schema handling does not extend to generic tool payloads.
 Applications requiring exact business identifiers should use string fields.
+
+### Explicit schema requiredness
+
+Reflected fields are optional unless tagged `required:"true"` (the empty
+`required:""` marker is also accepted). Scalar Go types and the absence of
+`json:",omitempty"` no longer infer a required property. `optional:"true"` and
+`required:"false"` suppress requiredness; `optional:"false"` does not.
+
+This changes generated schemas for previously untagged scalar fields. Add explicit
+requirements where presence is part of the API contract. Nullable types can still
+be required: required presence and whether a value permits null are separate.
+Schema annotations do not install runtime validation.
