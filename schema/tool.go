@@ -283,11 +283,25 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 			fieldSchema["example"] = example
 		}
 
+		enumeration, enumErr := choice.ParseEnum(field.Tag, field.Type)
+		if enumErr != nil {
+			fieldSchema["not"] = map[string]any{}
+		}
+		if enumeration != nil {
+			fieldSchema["type"] = enumeration.WireType(true)
+			delete(fieldSchema, "format")
+			values := enumeration.WireValues(true)
+			if field.Type.Kind() == reflect.Pointer {
+				fieldSchema["type"] = []string{enumeration.WireType(true), "null"}
+				values = append(values, nil)
+			}
+			fieldSchema["enum"] = values
+		}
 		constraint, choiceErr := choice.Parse(field.Tag, field.Type)
 		if choiceErr != nil {
 			// This legacy API has no error return. Fail closed on invalid metadata.
 			fieldSchema["not"] = map[string]interface{}{}
-		} else if constraint != nil {
+		} else if constraint != nil && enumeration == nil {
 			if field.Type.Kind() == reflect.Pointer {
 				fieldSchema["enum"] = append(constraint.WireValues(), nil)
 			} else if constraint.Type.Kind() == reflect.String {

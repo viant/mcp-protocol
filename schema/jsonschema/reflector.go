@@ -355,11 +355,25 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 	if wire := c.reflector.WireTypes[choiceBase]; wire != nil {
 		choiceType = wire
 	}
+	enumeration, err := choice.ParseEnum(field.Field.Tag, choiceType)
+	if err != nil {
+		return nil, err
+	}
+	if enumeration != nil {
+		if field.Quoted || declared {
+			return nil, fmt.Errorf("enumAccept conflicts with explicit scalar wire encoding")
+		}
+		property = map[string]any{"type": enumeration.WireType(true), "enum": enumeration.WireValues(true)}
+		if field.Field.ReflectedType.Kind() == reflect.Pointer {
+			property["type"] = []string{enumeration.WireType(true), "null"}
+			property["enum"] = append(enumeration.WireValues(true), nil)
+		}
+	}
 	constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)
 	if err != nil {
 		return nil, fmt.Errorf("field %s choices: %w", fieldPath, err)
 	}
-	if constraint != nil {
+	if constraint != nil && enumeration == nil {
 		if field.Quoted {
 			return nil, fmt.Errorf("field %s choice cannot override quoted JSON wire type", fieldPath)
 		}
