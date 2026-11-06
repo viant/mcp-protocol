@@ -1,10 +1,14 @@
 package fieldname
 
-import "reflect"
+import (
+	"github.com/viant/x/shape"
+	"reflect"
+)
 
 // Visibility carries the existing schema owner's selection policy to discovery
 // and invocation. Its zero value preserves ordinary native JSON visibility.
 type Visibility struct {
+	Representation *shape.Representation
 	// FallbackName optionally maps the selected JSON fallback before explicit
 	// MCP names are resolved. Nil preserves existing field names.
 	FallbackName func(reflect.StructField, string) string
@@ -17,11 +21,19 @@ type Visibility struct {
 // Winner selection happens before this check, so excluded winners never expose
 // shadowed fields. Only internal:"true" is hidden by ExcludeInternal.
 func (v Visibility) Excluded(owner reflect.Type, index []int) bool {
+	metadata := metadataForType(v.Representation, owner)
 	for _, position := range index {
 		for owner.Kind() == reflect.Pointer {
 			owner = owner.Elem()
+			if metadata != nil {
+				metadata = metadata.Elem()
+			}
 		}
 		field := owner.Field(position)
+		if metadata != nil {
+			field = metadata.Field(position)
+			metadata = metadata.FieldShape(position)
+		}
 		if v.ExcludeInternal && field.Tag.Get("internal") == "true" || v.ExcludeField != nil && v.ExcludeField(field) {
 			return true
 		}
@@ -42,4 +54,24 @@ func (v Visibility) Resolve(field reflect.StructField, fallback string) (Name, e
 		fallback = v.FallbackName(field, fallback)
 	}
 	return Resolve(field, fallback)
+}
+
+func metadataForType(metadata *shape.Representation, t reflect.Type) *shape.Representation {
+	if metadata == nil || !metadata.Changed() {
+		return nil
+	}
+	for metadata.Original() != t && metadata.Original().Kind() == reflect.Pointer {
+		metadata = metadata.Elem()
+	}
+	return metadata
+}
+func childVisibility(v Visibility, metadata *shape.Representation) Visibility {
+	v.Representation = metadata
+	return v
+}
+func elementVisibility(v Visibility) Visibility {
+	if v.Representation != nil {
+		v.Representation = v.Representation.Elem()
+	}
+	return v
 }

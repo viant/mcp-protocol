@@ -4,6 +4,7 @@ package fieldname
 
 import (
 	"fmt"
+	"github.com/viant/x/shape"
 	"reflect"
 	"strings"
 )
@@ -75,9 +76,10 @@ func Resolve(field reflect.StructField, fallback string) (Name, error) {
 
 // Entry maps a selected original JSON field to its public MCP identity.
 type Entry struct {
-	Field    reflect.StructField
-	JSONName string
-	Name     Name
+	Representation *shape.Representation
+	Field          reflect.StructField
+	JSONName       string
+	Name           Name
 }
 
 // Validate detects final public collisions without mutating the caller's object.

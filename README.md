@@ -277,3 +277,12 @@ This changes generated schemas for previously untagged scalar fields. Add explic
 requirements where presence is part of the API contract. Nullable types can still
 be required: required presence and whether a value permits null are separate.
 Schema annotations do not install runtime validation.
+
+### Opt-in representation metadata
+
+`jsonschema.Request.Representation` and `fieldname.Visibility.Representation` accept
+the same immutable `shape.Representation`. Schema generation and argument-name
+normalization then use effective metadata over canonical field indexes and types,
+including method-bearing embeddings and nested collections. `Request.Field` retains
+selected member annotations when a host flattens an anonymous body. Nil metadata
+preserves existing behavior; this does not change the MCP wire protocol.

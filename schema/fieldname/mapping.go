@@ -17,25 +17,40 @@ func Fields(t reflect.Type, visibility ...Visibility) ([]Entry, error) {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
-	fields, err := xshape.Linked(t).JSONFields()
+	policy := selectedVisibility(visibility)
+	policy.Representation = metadataForType(policy.Representation, t)
+	var fields []xshape.JSONField
+	var err error
+	if policy.Representation != nil {
+		if policy.Representation.Original() != t {
+			return nil, fmt.Errorf("MCP metadata type mismatch")
+		}
+		fields, err = policy.Representation.JSONFields()
+	} else {
+		fields, err = xshape.Linked(t).JSONFields()
+	}
 	if err != nil {
 		return nil, err
 	}
 	var out []Entry
 	for _, f := range fields {
-		if selectedVisibility(visibility).Excluded(t, f.Field.Index) {
+		if policy.Excluded(t, f.Field.Index) {
 			continue
 		}
 
 		if f.Field.Tag.Get("setMarker") == "true" {
 			continue
 		}
-		n, e := selectedVisibility(visibility).Resolve(f.Field.StructField(), f.Name)
+		n, e := policy.Resolve(f.Field.StructField(), f.Name)
 		if e != nil {
 			return nil, e
 		}
 		n.Hidden = false // Visibility is selected by the schema owner before naming.
-		out = append(out, Entry{Field: f.Field.StructField(), JSONName: f.Name, Name: n})
+		var metadata *xshape.Representation
+		if policy.Representation != nil {
+			metadata = policy.Representation.FieldShapeByIndex(f.Field.Index)
+		}
+		out = append(out, Entry{Representation: metadata, Field: f.Field.StructField(), JSONName: f.Name, Name: n})
 	}
 	if err := Validate(out); err != nil {
 		return nil, err
@@ -68,8 +83,10 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+	policy := selectedVisibility(visibility)
+	policy.Representation = metadataForType(policy.Representation, t)
 	if CustomJSON(t) {
-		explicit := selectedVisibility(visibility)
+		explicit := policy
 		explicit.FallbackName = nil
 		yes, e := HasNames(t, explicit)
 		if e != nil {
@@ -88,7 +105,7 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 		}
 		out := make([]any, len(a))
 		for i, v := range a {
-			n, e := Normalize(t.Elem(), v, visibility...)
+			n, e := Normalize(t.Elem(), v, elementVisibility(policy))
 			if e != nil {
 				return nil, e
 			}
@@ -103,7 +120,7 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 		}
 		out := make(map[string]any, len(m))
 		for key, v := range m {
-			n, e := Normalize(t.Elem(), v, visibility...)
+			n, e := Normalize(t.Elem(), v, elementVisibility(policy))
 			if e != nil {
 				return nil, e
 			}
@@ -114,7 +131,7 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 	if t.Kind() != reflect.Struct {
 		return value, nil
 	}
-	entries, e := Fields(t, visibility...)
+	entries, e := Fields(t, policy)
 	if e != nil {
 		return nil, e
 	}
@@ -151,7 +168,7 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 		if key == "" {
 			continue
 		}
-		v, e := Normalize(f.Field.Type, m[key], visibility...)
+		v, e := Normalize(f.Field.Type, m[key], childVisibility(policy, f.Representation))
 		if e != nil {
 			return nil, e
 		}
@@ -171,6 +188,7 @@ func HasNames(t reflect.Type, visibility ...Visibility) (bool, error) {
 	type visitKey struct {
 		typ       reflect.Type
 		formatted bool
+		metadata  *xshape.Representation
 	}
 	seen := map[visitKey]bool{}
 	var visit func(reflect.Type, Visibility) (bool, error)
@@ -178,14 +196,14 @@ func HasNames(t reflect.Type, visibility ...Visibility) (bool, error) {
 		if CustomJSON(t) {
 			policy.FallbackName = nil
 		}
-		key := visitKey{t, policy.FallbackName != nil}
+		key := visitKey{t, policy.FallbackName != nil, policy.Representation}
 		if seen[key] {
 			return false, nil
 		}
 		seen[key] = true
 		switch t.Kind() {
 		case reflect.Pointer, reflect.Array, reflect.Slice, reflect.Map:
-			return visit(t.Elem(), policy)
+			return visit(t.Elem(), elementVisibility(policy))
 		}
 		if t.Kind() != reflect.Struct {
 			return false, nil
@@ -199,7 +217,7 @@ func HasNames(t reflect.Type, visibility ...Visibility) (bool, error) {
 			if f.Name.Explicit || len(f.Name.Aliases) > 0 || f.Name.Public != f.JSONName {
 				return true, nil
 			}
-			yes, e := visit(f.Field.Type, policy)
+			yes, e := visit(f.Field.Type, childVisibility(policy, f.Representation))
 			if e != nil || yes {
 				return yes, e
 			}
