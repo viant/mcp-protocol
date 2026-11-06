@@ -18,6 +18,8 @@ import (
 // Reflector uses X's encoding/json field projection; annotations cannot change
 // selection, Go identity, JSON names, or source types.
 type Reflector struct {
+	// Output selects enumStyle for response schemas; inputs use enumAccept.
+	Output bool
 	// FallbackName shares an owner-supplied naming policy with argument binding.
 	// Explicit MCP names remain authoritative.
 	FallbackName func(reflect.StructField, string) string
@@ -363,10 +365,10 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 		if field.Quoted || declared {
 			return nil, fmt.Errorf("enumAccept conflicts with explicit scalar wire encoding")
 		}
-		property = map[string]any{"type": enumeration.WireType(true), "enum": enumeration.WireValues(true)}
+		property = map[string]any{"type": enumeration.WireType(!c.reflector.Output), "enum": enumeration.WireValues(!c.reflector.Output)}
 		if field.Field.ReflectedType.Kind() == reflect.Pointer {
-			property["type"] = []string{enumeration.WireType(true), "null"}
-			property["enum"] = append(enumeration.WireValues(true), nil)
+			property["type"] = []string{enumeration.WireType(!c.reflector.Output), "null"}
+			property["enum"] = append(enumeration.WireValues(!c.reflector.Output), nil)
 		}
 	}
 	constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)

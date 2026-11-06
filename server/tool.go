@@ -17,6 +17,8 @@ type ToolHandlerFunc func(ctx context.Context, request *schema.CallToolRequest) 
 type ToolEntry struct {
 	Handler  ToolHandlerFunc
 	Metadata schema.Tool
+	// MetadataFor resolves caller-specific metadata without mutating the registration.
+	MetadataFor func(context.Context) (schema.Tool, error)
 }
 
 // Tools is a collection of ToolEntry
@@ -110,4 +112,32 @@ func RegisterTool[I any, O any](registry *Registry, name, description string, ha
 
 	registry.RegisterToolWithSchema(name, description, inSchema, &outSchema, wrapped)
 	return nil
+}
+
+// ListToolsFor resolves metadata using the current authenticated request context.
+// Errors fail discovery closed; static metadata is never a fallback on denial.
+func (d *Registry) ListToolsFor(ctx context.Context) ([]schema.Tool, error) {
+	var result []schema.Tool
+	var resultErr error
+	d.ToolRegistry.Range(func(_ string, entry *ToolEntry) bool {
+		if err := ctx.Err(); err != nil {
+			resultErr = err
+			return false
+		}
+		metadata := entry.Metadata
+		if entry.MetadataFor != nil {
+			var err error
+			metadata, err = entry.MetadataFor(ctx)
+			if err != nil {
+				resultErr = err
+				return false
+			}
+		}
+		result = append(result, metadata)
+		return true
+	})
+	if resultErr != nil {
+		return nil, resultErr
+	}
+	return result, nil
 }

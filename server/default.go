@@ -117,7 +117,10 @@ func (d *DefaultHandler) Unsubscribe(ctx context.Context, jRequest *jsonrpc.Type
 // ListTools returns method-not-found by default.
 func (d *DefaultHandler) ListTools(ctx context.Context, jRequest *jsonrpc.TypedRequest[*schema.ListToolsRequest]) (*schema.ListToolsResult, *jsonrpc.Error) {
 	// Return the list of registered tools
-	tools := d.ListRegisteredTools()
+	tools, err := d.ListToolsFor(ctx)
+	if err != nil {
+		return nil, jsonrpc.NewError(jsonrpc.InternalError, err.Error(), nil)
+	}
 	protocolVersion := jRequest.Request.Params.Meta.IoModelcontextprotocolProtocolVersion
 	if protocolVersion == "" && d.ClientInitialize != nil {
 		protocolVersion = d.ClientInitialize.ProtocolVersion
