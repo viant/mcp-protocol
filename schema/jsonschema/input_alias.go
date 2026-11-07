@@ -38,6 +38,9 @@ func projectInputAliases(object map[string]any, canonical string, property map[s
 		choices = append(choices, map[string]any{"required": []string{alias}, "properties": map[string]any{alias: admitted}})
 	}
 	if conservative {
+		if policy.InputNamesPriority == "alias" {
+			properties[canonical] = map[string]any{"description": description}
+		}
 		object["description"] = strings.TrimSpace(fmt.Sprint(objectDescription(object)) + " " + description)
 		return false
 	}

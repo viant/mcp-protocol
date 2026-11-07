@@ -132,3 +132,19 @@ func TestOwnerRequirednessPrecedesAliasProjection(t *testing.T) {
 		require.Equal(t, tc.valid, result.Valid(), "%v", result.Errors())
 	}
 }
+
+func TestNativeAliasPriorityOwnerProjection(t *testing.T) {
+	type body struct {
+		ID *int `json:"flightId" format:"inputNames=CampaignFlightId,inputNamesPriority=alias,inputNamesCase=fold"`
+	}
+	for _, native := range []bool{false, true} {
+		schema, err := (jsonschema.Reflector{InputAliases: native}).Compile(jsonschema.Request{Type: reflect.TypeFor[body]()})
+		require.NoError(t, err)
+		result, err := gojsonschema.Validate(gojsonschema.NewGoLoader(schema), gojsonschema.NewGoLoader(map[string]any{"flightId": "ignored", "CampaignFlightId": 2}))
+		require.NoError(t, err)
+		require.Equal(t, native, result.Valid())
+	}
+	schema, err := (jsonschema.Reflector{InputAliases: true, Output: true}).Compile(jsonschema.Request{Type: reflect.TypeFor[body]()})
+	require.NoError(t, err)
+	require.NotContains(t, schema["properties"], "CampaignFlightId")
+}
