@@ -10,6 +10,22 @@ import (
 // projectInputAliases operates inside the owning object projection. It returns
 // whether ordinary canonical requiredness should still be emitted.
 func projectInputAliases(object map[string]any, canonical string, property map[string]any, policy *format.Tag, required bool) bool {
+	if policy.InputGroup != "" {
+		description := fmt.Sprintf("Native input source group %s, priority %s, canonical case %s. The highest-priority present admitted source wins; null participates. Losing values and required presence have a conservative discovery schema; runtime selection and validation remain authoritative.", policy.InputGroup, policy.InputPriority, policy.InputCase)
+		properties := object["properties"].(map[string]any)
+		properties[canonical] = map[string]any{"description": description}
+		excluded := map[string]bool{}
+		for _, name := range strings.Split(policy.InputNamesExclude, "|") {
+			excluded[name] = true
+		}
+		for _, alias := range strings.Split(policy.InputNames, "|") {
+			if alias != "" && alias != canonical && !excluded[alias] {
+				properties[alias] = map[string]any{"description": description}
+			}
+		}
+		object["description"] = strings.TrimSpace(objectDescription(object) + " " + description)
+		return false
+	}
 	if policy.InputNames == "" {
 		return required
 	}
