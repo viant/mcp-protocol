@@ -61,7 +61,7 @@ func (r Reflector) Compile(request Request) (map[string]any, error) {
 	if request.Property != "" {
 		prefix = "#/properties/" + strings.ReplaceAll(strings.ReplaceAll(request.Property, "~", "~0"), "/", "~1") + "/$defs/"
 	}
-	compiler := reflectionCompiler{reflector: r, prefix: prefix, active: map[reflect.Type]string{}, objects: map[string]map[string]any{}, referenced: map[string]bool{}}
+	compiler := reflectionCompiler{reflector: r, prefix: prefix, active: map[reflect.Type]string{}, objects: map[string]map[string]any{}, referenced: map[string]bool{}, inputPlans: map[string]*format.InputScopePlan{}}
 	var result map[string]any
 	var err error
 	if request.Field != nil {
@@ -73,6 +73,9 @@ func (r Reflector) Compile(request Request) (map[string]any, error) {
 		result, err = compiler.value(request.Type, request.Path, false, request.Representation)
 	}
 	if err != nil {
+		return nil, err
+	}
+	if err := format.ValidateInputScopePlan(compiler.inputRoot); err != nil {
 		return nil, err
 	}
 	if len(compiler.referenced) > 0 {
@@ -91,11 +94,13 @@ func (r Reflector) Compile(request Request) (map[string]any, error) {
 }
 
 type reflectionCompiler struct {
-	reflector  Reflector
-	prefix     string
-	active     map[reflect.Type]string
-	objects    map[string]map[string]any
-	referenced map[string]bool
+	inputRoot, inputCurrent *format.InputScopePlan
+	inputPlans              map[string]*format.InputScopePlan
+	reflector               Reflector
+	prefix                  string
+	active                  map[reflect.Type]string
+	objects                 map[string]map[string]any
+	referenced              map[string]bool
 }
 
 func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, representations ...*xshape.Representation) (map[string]any, error) {
@@ -171,6 +176,9 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 	case reflect.Struct:
 
 		if id := c.active[t]; id != "" {
+			if c.inputCurrent != nil {
+				c.inputCurrent.Children = append(c.inputCurrent.Children, c.inputPlans[id])
+			}
 			c.referenced[id] = true
 			return map[string]any{"$ref": c.prefix + id}, nil
 		}
@@ -183,6 +191,19 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 			metadataKey = metadata.Signature()
 		}
 		id := fmt.Sprintf("T_%x", sha256.Sum256([]byte(t.PkgPath()+":"+expression+":"+path+metadataKey)))
+		if c.reflector.InputAliases && !c.reflector.Output {
+			node := &format.InputScopePlan{Scope: format.InputScope{}}
+			c.inputPlans[id] = node
+			if c.inputRoot == nil {
+				c.inputRoot = node
+			}
+			previous := c.inputCurrent
+			if previous != nil {
+				previous.Children = append(previous.Children, node)
+			}
+			c.inputCurrent = node
+			defer func() { c.inputCurrent = previous }()
+		}
 		c.active[t] = id
 		defer delete(c.active, t)
 		properties := map[string]any{}
@@ -208,6 +229,9 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 				return nil, err
 			}
 			names[field.Name] = name
+			if c.inputCurrent != nil {
+				c.inputCurrent.Scope[field.Field.Name] = false
+			}
 			name.Hidden = false // Already retained by the owner visibility policy.
 			entries = append(entries, fieldname.Entry{Field: field.Field.StructField(), JSONName: field.Name, Name: name})
 		}
@@ -245,6 +269,11 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 				if err != nil {
 					return nil, err
 				}
+				guard, err := policy.InputGuard()
+				if err != nil {
+					return nil, err
+				}
+				c.inputCurrent.Guards = append(c.inputCurrent.Guards, guard)
 				inputNames = append(inputNames, format.InputName{Name: name.Public, Aliases: policy.InputNames})
 				inputPolicies = append(inputPolicies, policy)
 				isRequired = projectInputAliases(result, name.Public, property, policy, isRequired)
