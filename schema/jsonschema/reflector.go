@@ -22,6 +22,9 @@ type Reflector struct {
 	// InputAliases opts into native Tagly decoder aliases. Ordinary encoding/json
 	// consumers leave this false. Output schemas always retain canonical names.
 	InputAliases bool
+	// RequireField adds owner-supplied requiredness before input alias projection.
+	// Nil retains authored tags only. Hidden fields are never passed to it.
+	RequireField func(path string, field reflect.StructField) bool
 	// Output selects enumStyle for response schemas; inputs use enumAccept.
 	Output bool
 	// FallbackName shares an owner-supplied naming policy with argument binding.
@@ -234,6 +237,9 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 			}
 			properties[name.Public] = property
 			isRequired := requiredField(t, field.Field.Index, field.Field.StructField(), metadata)
+			if c.reflector.RequireField != nil && c.reflector.RequireField(fieldPath, field.Field.StructField()) {
+				isRequired = true
+			}
 			if c.reflector.InputAliases && !c.reflector.Output {
 				policy, err := format.Parse(field.Field.Tag)
 				if err != nil {

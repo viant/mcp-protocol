@@ -39,7 +39,7 @@ func TestNativeInputAliasPolicyConservativeAdmission(t *testing.T) {
 	type body struct {
 		Frequency *constraint `json:"frequencyCapping,omitempty" format:"inputNames=frequencyCap,inputNamesPriority=canonical,inputNamesKinds=object|null,inputNamesCase=fold"`
 	}
-	schema, err := (jsonschema.Reflector{InputAliases: true}).Compile(jsonschema.Request{Type: reflect.TypeFor[body]()})
+	schema, err := (jsonschema.Reflector{InputAliases: true, RequireField: func(_ string, field reflect.StructField) bool { return field.Name == "Frequency" }}).Compile(jsonschema.Request{Type: reflect.TypeFor[body]()})
 	require.NoError(t, err)
 	for _, body := range []map[string]any{
 		{"frequencyCap": 5},
@@ -51,6 +51,7 @@ func TestNativeInputAliasPolicyConservativeAdmission(t *testing.T) {
 		require.True(t, result.Valid(), "%v", result.Errors())
 	}
 	require.Contains(t, schema["properties"].(map[string]any)["frequencyCap"].(map[string]any)["description"], "runtime")
+	require.Empty(t, schema["required"], "folded required presence is enforced by runtime, not an exact-only discovery constraint")
 }
 
 func TestNativeInputAliasesNestedKindsAndVisibility(t *testing.T) {
@@ -99,4 +100,35 @@ func TestNativeInputAliasExclusionAndCollision(t *testing.T) {
 	}
 	_, err = (jsonschema.Reflector{InputAliases: true}).Compile(jsonschema.Request{Type: reflect.TypeFor[collision]()})
 	require.ErrorContains(t, err, "conflicts with canonical")
+}
+
+func TestOwnerRequirednessPrecedesAliasProjection(t *testing.T) {
+	type child struct {
+		Name   string `json:"name,omitempty" format:"inputNames=oldName"`
+		Code   string `json:"code,omitempty"`
+		Hidden string `json:"-"`
+	}
+	type body struct {
+		Child *child `json:"child"`
+	}
+	var paths []string
+	schema, err := (jsonschema.Reflector{InputAliases: true, RequireField: func(path string, field reflect.StructField) bool {
+		paths = append(paths, path)
+		return path == "Body.Child.Name" || path == "Body.Child.Code"
+	}}).Compile(jsonschema.Request{Type: reflect.TypeFor[body](), Path: "Body"})
+	require.NoError(t, err)
+	require.NotContains(t, paths, "Body.Child.Hidden")
+	for _, tc := range []struct {
+		child map[string]any
+		valid bool
+	}{
+		{map[string]any{"oldName": "a", "code": "b"}, true},
+		{map[string]any{"name": "a", "code": "b"}, true},
+		{map[string]any{"code": "b"}, false},
+		{map[string]any{"oldName": "a"}, false},
+	} {
+		result, err := gojsonschema.Validate(gojsonschema.NewGoLoader(schema), gojsonschema.NewGoLoader(map[string]any{"child": tc.child}))
+		require.NoError(t, err)
+		require.Equal(t, tc.valid, result.Valid(), "%v", result.Errors())
+	}
 }
