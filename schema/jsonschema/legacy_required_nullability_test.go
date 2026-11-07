@@ -20,7 +20,7 @@ type requiredControls struct {
 	Omitted  string  `json:"omitted,omitempty"`
 	Optional string  `json:"optional" optional`
 	NotReq   string  `json:"notReq" required:"false"`
-	Forced   *string `json:"forced,omitempty" required:"true"`
+	Forced   *string `json:"forced,omitempty" parameter:",required=false" required:"true"`
 }
 
 type recursiveRequired struct {

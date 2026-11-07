@@ -8,7 +8,10 @@ import (
 // Required reports explicitly authored requiredness. Go value kinds and JSON
 // omission flags do not imply required presence. Runtime validation is separate.
 func Required(field reflect.StructField) bool {
-	if explicitlyOptional(field.Tag) {
+	// Parameter binding flags belong to their owning runtime, not this schema
+	// declaration. In particular, an optional binding can document a required
+	// public property without changing runtime validation/error ordering.
+	if value, ok := field.Tag.Lookup("optional"); ok && value != "false" {
 		return false
 	}
 	value, explicit := field.Tag.Lookup("required")

@@ -21,6 +21,11 @@ func TestFieldsAreOptionalUnlessExplicitlyRequired(t *testing.T) {
 		{"optional false", reflect.TypeOf(""), `optional:"false"`, false},
 		{"optional true wins", reflect.TypeOf(""), `required:"true" optional:"true"`, false},
 		{"description not a flag", reflect.TypeOf(""), `description:"an optional feature"`, false},
+		{"explicit before parameter", reflect.TypeOf((*[]int)(nil)), `required:"true" parameter:",required=false"`, true},
+		{"explicit after parameter", reflect.TypeOf((*[]int)(nil)), `parameter:",required=false" required:"true"`, true},
+		{"explicit empty required", reflect.TypeOf(""), `parameter:",required=false" required:""`, true},
+		{"explicit optional still wins", reflect.TypeOf(""), `required:"true" parameter:",required=false" optional:"true"`, false},
+		{"description cannot override", reflect.TypeOf(""), `required:"true" description:"parameter required=false is supported"`, true},
 		{"legacy parameter", reflect.TypeOf(""), `parameter:",required=false"`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
