@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/viant/mcp-protocol/schema/fieldname"
 	"github.com/viant/tagly/choice"
+	"github.com/viant/tagly/format"
 	xshape "github.com/viant/x/shape"
 	"reflect"
 	"strings"
@@ -18,6 +19,9 @@ import (
 // Reflector uses X's encoding/json field projection; annotations cannot change
 // selection, Go identity, JSON names, or source types.
 type Reflector struct {
+	// InputAliases opts into native Tagly decoder aliases. Ordinary encoding/json
+	// consumers leave this false. Output schemas always retain canonical names.
+	InputAliases bool
 	// Output selects enumStyle for response schemas; inputs use enumAccept.
 	Output bool
 	// FallbackName shares an owner-supplied naming policy with argument binding.
@@ -208,6 +212,8 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 			return nil, err
 		}
 		var required []string
+		var inputNames []format.InputName
+		var inputPolicies []*format.Tag
 		for _, field := range fields {
 			// Retain owner visibility before interpreting authored naming.
 			if field.Field.Tag.Get("setMarker") == "true" || visibility.Excluded(t, field.Field.Index) {
@@ -227,8 +233,23 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 				return nil, err
 			}
 			properties[name.Public] = property
-			if requiredField(t, field.Field.Index, field.Field.StructField(), metadata) {
+			isRequired := requiredField(t, field.Field.Index, field.Field.StructField(), metadata)
+			if c.reflector.InputAliases && !c.reflector.Output {
+				policy, err := format.Parse(field.Field.Tag)
+				if err != nil {
+					return nil, err
+				}
+				inputNames = append(inputNames, format.InputName{Name: name.Public, Aliases: policy.InputNames})
+				inputPolicies = append(inputPolicies, policy)
+				isRequired = projectInputAliases(result, name.Public, property, policy, isRequired)
+			}
+			if isRequired {
 				required = append(required, name.Public)
+			}
+		}
+		if c.reflector.InputAliases && !c.reflector.Output {
+			if _, err := format.NewInputNameMatcher(inputNames, inputPolicies...); err != nil {
+				return nil, err
 			}
 		}
 		if len(required) > 0 {

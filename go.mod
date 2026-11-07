@@ -19,7 +19,7 @@ require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/viant/tagly v0.4.2-0.20261106060238-fe360d6f7ac4
+	github.com/viant/tagly v0.4.2-0.20261107201725-921cda4735cc
 	github.com/viant/x v0.6.1-0.20261106041415-0487ec66884b
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
