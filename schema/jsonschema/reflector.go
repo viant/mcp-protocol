@@ -421,41 +421,51 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 		if field.Quoted || declared {
 			return nil, fmt.Errorf("enumAccept conflicts with explicit scalar wire encoding")
 		}
-		property = map[string]any{"type": enumeration.WireType(!c.reflector.Output), "enum": enumeration.WireValues(!c.reflector.Output)}
-		if field.Field.ReflectedType.Kind() == reflect.Pointer {
-			property["type"] = []string{enumeration.WireType(!c.reflector.Output), "null"}
-			property["enum"] = append(enumeration.WireValues(!c.reflector.Output), nil)
+		domain := enumeration.InputDomain()
+		if c.reflector.Output {
+			domain = enumeration.OutputDomain()
 		}
-	}
-	constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)
-	if err != nil {
-		return nil, fmt.Errorf("field %s choices: %w", fieldPath, err)
-	}
-	if constraint != nil && enumeration == nil {
-		if field.Quoted {
-			return nil, fmt.Errorf("field %s choice cannot override quoted JSON wire type", fieldPath)
-		}
-		// A custom scalar's explicit JSON wire schema can differ from its
-		// Go kind. Never append contradictory typed choices to that schema.
-		compatible := false
-		switch types := property["type"].(type) {
-		case string:
-			compatible = types == constraint.JSONType()
-		case []string:
-			for _, name := range types {
-				if name == constraint.JSONType() {
-					compatible = true
-				}
+		if domain != nil {
+			property = enumDomainSchema(domain, field.Field.ReflectedType.Kind() == reflect.Pointer)
+		} else {
+			property = map[string]any{"type": enumeration.WireType(!c.reflector.Output), "enum": enumeration.WireValues(!c.reflector.Output)}
+			if field.Field.ReflectedType.Kind() == reflect.Pointer {
+				property["type"] = []string{enumeration.WireType(!c.reflector.Output), "null"}
+				property["enum"] = append(enumeration.WireValues(!c.reflector.Output), nil)
 			}
 		}
-		if declared && !compatible {
-			return nil, fmt.Errorf("field %s choice type conflicts with explicit scalar wire schema", fieldPath)
+	}
+	if enumeration == nil {
+		constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)
+		if err != nil {
+			return nil, fmt.Errorf("field %s choices: %w", fieldPath, err)
 		}
-		values := constraint.WireValues()
-		if field.Field.ReflectedType.Kind() == reflect.Pointer {
-			values = append(values, nil)
+		if constraint != nil && enumeration == nil {
+			if field.Quoted {
+				return nil, fmt.Errorf("field %s choice cannot override quoted JSON wire type", fieldPath)
+			}
+			// A custom scalar's explicit JSON wire schema can differ from its
+			// Go kind. Never append contradictory typed choices to that schema.
+			compatible := false
+			switch types := property["type"].(type) {
+			case string:
+				compatible = types == constraint.JSONType()
+			case []string:
+				for _, name := range types {
+					if name == constraint.JSONType() {
+						compatible = true
+					}
+				}
+			}
+			if declared && !compatible {
+				return nil, fmt.Errorf("field %s choice type conflicts with explicit scalar wire schema", fieldPath)
+			}
+			values := constraint.WireValues()
+			if field.Field.ReflectedType.Kind() == reflect.Pointer {
+				values = append(values, nil)
+			}
+			property["enum"] = values
 		}
-		property["enum"] = values
 	}
 	if c.reflector.Annotate != nil {
 		description, example := c.reflector.Annotate(fieldPath, field.Field.StructField())
