@@ -6,6 +6,7 @@ import (
 	"fmt"
 	xshape "github.com/viant/x/shape"
 	"reflect"
+	"strings"
 )
 
 // Fields uses the same native JSON winner selection as the modern reflector.
@@ -34,10 +35,6 @@ func Fields(t reflect.Type, visibility ...Visibility) ([]Entry, error) {
 	}
 	var out []Entry
 	for _, f := range fields {
-		if policy.Excluded(t, f.Field.Index) {
-			continue
-		}
-
 		if f.Field.Tag.Get("setMarker") == "true" {
 			continue
 		}
@@ -52,11 +49,81 @@ func Fields(t reflect.Type, visibility ...Visibility) ([]Entry, error) {
 		}
 		out = append(out, Entry{Representation: metadata, Field: f.Field.StructField(), JSONName: f.Name, Name: n})
 	}
+	// Case conversion can merge otherwise distinct native JSON names across
+	// promoted fields. Select the unique shallow winner before visibility so
+	// excluding that winner cannot expose the shadowed member.
+	if policy.FallbackName != nil {
+		out = formattedWinners(out)
+	}
+	visible := out[:0]
+	for _, entry := range out {
+		if !policy.Excluded(t, entry.Field.Index) {
+			visible = append(visible, entry)
+		}
+	}
+	out = visible
 	if err := Validate(out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
+
+// formattedWinners resolves only collisions introduced by implicit formatting.
+// Native JSON tag dominance breaks same-depth ties. Authored MCP names,
+// aliases and remaining ambiguities stay Validate's concern.
+func formattedWinners(entries []Entry) []Entry {
+	groups := map[string][]int{}
+	for i, entry := range entries {
+		groups[entry.Name.Public] = append(groups[entry.Name.Public], i)
+	}
+	shadowed := map[int]bool{}
+	for _, group := range groups {
+		if len(group) < 2 {
+			continue
+		}
+		winner, depth, unique := -1, int(^uint(0)>>1), false
+		formatted, explicit := false, false
+		for _, i := range group {
+			entry := entries[i]
+			formatted = formatted || entry.Name.Public != entry.JSONName
+			explicit = explicit || entry.Name.Explicit
+			switch n := len(entry.Field.Index); {
+			case n < depth:
+				winner, depth, unique = i, n, true
+			case n == depth:
+				unique = false
+			}
+		}
+		if !unique {
+			tagged := 0
+			for _, i := range group {
+				entry := entries[i]
+				name, _, _ := strings.Cut(entry.Field.Tag.Get("json"), ",")
+				if len(entry.Field.Index) == depth && name != "" && name != "-" {
+					winner = i
+					tagged++
+				}
+			}
+			unique = tagged == 1
+		}
+		if !formatted || explicit || !unique {
+			continue
+		}
+		for _, i := range group {
+			if i != winner {
+				shadowed[i] = true
+			}
+		}
+	}
+	result := entries[:0]
+	for i, entry := range entries {
+		if !shadowed[i] {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
 func CustomJSON(t reflect.Type) bool {
 	if t == nil {
 		return false

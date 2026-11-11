@@ -218,35 +218,27 @@ func (c *reflectionCompiler) value(t reflect.Type, path string, inSlice bool, re
 		if err != nil {
 			return nil, err
 		}
-		entries := make([]fieldname.Entry, 0, len(fields))
-		names := map[string]fieldname.Name{}
-		for _, field := range fields {
-			if field.Field.Tag.Get("setMarker") == "true" || visibility.Excluded(t, field.Field.Index) {
-				continue
-			}
-			name, err := visibility.Resolve(field.Field.StructField(), field.Name)
-			if err != nil {
-				return nil, err
-			}
-			names[field.Name] = name
-			if c.inputCurrent != nil {
-				c.inputCurrent.Scope[field.Field.Name] = false
-			}
-			name.Hidden = false // Already retained by the owner visibility policy.
-			entries = append(entries, fieldname.Entry{Field: field.Field.StructField(), JSONName: field.Name, Name: name})
-		}
-		if err := fieldname.Validate(entries); err != nil {
+		// Discovery and input normalization share the same final-name winner
+		// selection, including case-formatted anonymous members.
+		entries, err := fieldname.Fields(t, visibility)
+		if err != nil {
 			return nil, err
+		}
+		names := map[string]fieldname.Name{}
+		for _, entry := range entries {
+			names[entry.JSONName] = entry.Name
+			if c.inputCurrent != nil {
+				c.inputCurrent.Scope[entry.Field.Name] = false
+			}
 		}
 		var required []string
 		var inputNames []format.InputName
 		var inputPolicies []*format.Tag
 		for _, field := range fields {
-			// Retain owner visibility before interpreting authored naming.
-			if field.Field.Tag.Get("setMarker") == "true" || visibility.Excluded(t, field.Field.Index) {
+			name, selected := names[field.Name]
+			if !selected {
 				continue
 			}
-			name := names[field.Name]
 			fieldPath := field.Field.Name
 			if path != "" {
 				fieldPath = path + "." + fieldPath
