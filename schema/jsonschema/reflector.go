@@ -459,6 +459,13 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 			property["enum"] = values
 		}
 	}
+	policy, err := format.Parse(field.Field.Tag)
+	if err != nil {
+		return nil, fmt.Errorf("field %s format: %w", fieldPath, err)
+	}
+	if policy.Nullable != nil {
+		property = fieldNullability(property, *policy.Nullable)
+	}
 	if c.reflector.Annotate != nil {
 		description, example := c.reflector.Annotate(fieldPath, field.Field.StructField())
 		if description != "" {
