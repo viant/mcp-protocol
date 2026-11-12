@@ -47,3 +47,9 @@ compilation does not add a request validator or change decoding. The owning
 runtime/application must enforce its declared non-null contract; native presence
 metadata can distinguish an omitted pointer from an explicit null. Metadata is
 prepared during compilation, without examining requests or executing a decoder.
+
+For enum inputs, `enumNull:"reject"` follows the enum plan's
+`AllowsNullInput()` policy. It removes the null alternative even for pointer
+storage or `format:"nullable=true"`; output nullability and omission remain
+unchanged. This keeps discovery aligned with the selected decoder rather than
+using storage pointers as an unconditional input-null grant.

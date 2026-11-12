@@ -466,6 +466,9 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 	if policy.Nullable != nil {
 		property = fieldNullability(property, *policy.Nullable)
 	}
+	if enumeration != nil && !c.reflector.Output && !enumeration.AllowsNullInput() {
+		property = fieldNullability(property, false)
+	}
 	if c.reflector.Annotate != nil {
 		description, example := c.reflector.Annotate(fieldPath, field.Field.StructField())
 		if description != "" {
