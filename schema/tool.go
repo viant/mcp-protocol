@@ -287,7 +287,14 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 		if enumErr != nil {
 			fieldSchema["not"] = map[string]any{}
 		}
-		if enumeration != nil {
+		if enumeration != nil && enumeration.CollectionItems() != nil {
+			items, ok := fieldSchema["items"].(map[string]interface{})
+			if !ok {
+				fieldSchema["not"] = map[string]any{}
+			} else {
+				items["enum"] = enumeration.CollectionItems().WireValues()
+			}
+		} else if enumeration != nil {
 			fieldSchema["type"] = enumeration.WireType(true)
 			delete(fieldSchema, "format")
 			values := enumeration.WireValues(true)

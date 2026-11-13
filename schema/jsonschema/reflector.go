@@ -409,7 +409,7 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 	if err != nil {
 		return nil, err
 	}
-	if enumeration != nil {
+	if enumeration != nil && enumeration.CollectionItems() == nil {
 		if field.Quoted || declared {
 			return nil, fmt.Errorf("enumAccept conflicts with explicit scalar wire encoding")
 		}
@@ -433,10 +433,13 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 			}
 		}
 	}
-	if enumeration == nil {
-		collection, err := choice.ParseCollectionEnum(field.Field.Tag, choiceType)
-		if err != nil {
-			return nil, fmt.Errorf("field %s collection choices: %w", fieldPath, err)
+	if enumeration == nil || enumeration.CollectionItems() != nil {
+		collection := enumeration
+		if collection == nil {
+			collection, err = choice.ParseCollectionEnum(field.Field.Tag, choiceType)
+			if err != nil {
+				return nil, fmt.Errorf("field %s collection choices: %w", fieldPath, err)
+			}
 		}
 		var constraint *choice.Constraint
 		if collection != nil {

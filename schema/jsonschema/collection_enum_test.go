@@ -30,3 +30,19 @@ func TestMCPCollectionEnumItems(t *testing.T) {
 		require.Equal(t, "array", properties["ordinary"].(map[string]any)["type"])
 	}
 }
+
+func TestExplicitNestedCollectionEnumKeepsItems(t *testing.T) {
+	type deal struct {
+		Channels []string `json:"channels" mcpEnum:"true" enumAccept:"literal" choice:"DISPLAY" choice:"VIDEO"`
+	}
+	type input struct {
+		Deals []deal `json:"deals"`
+	}
+	for _, output := range []bool{false, true} {
+		document, err := (Reflector{Output: output}).Compile(Request{Type: reflect.TypeFor[input]()})
+		require.NoError(t, err)
+		channels := document["properties"].(map[string]any)["deals"].(map[string]any)["items"].(map[string]any)["properties"].(map[string]any)["channels"].(map[string]any)
+		require.Equal(t, []string{"array", "null"}, channels["type"])
+		require.Equal(t, []any{"DISPLAY", "VIDEO"}, channels["items"].(map[string]any)["enum"])
+	}
+}
