@@ -420,10 +420,16 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 		if domain != nil {
 			property = enumDomainSchema(domain, field.Field.ReflectedType.Kind() == reflect.Pointer)
 		} else {
-			property = map[string]any{"type": enumeration.WireType(!c.reflector.Output), "enum": enumeration.WireValues(!c.reflector.Output)}
+			values := enumeration.WireValues(!c.reflector.Output)
+			property = map[string]any{"type": enumeration.WireType(!c.reflector.Output)}
 			if field.Field.ReflectedType.Kind() == reflect.Pointer {
 				property["type"] = []string{enumeration.WireType(!c.reflector.Output), "null"}
-				property["enum"] = append(enumeration.WireValues(!c.reflector.Output), nil)
+				if values != nil {
+					values = append(values, nil)
+				}
+			}
+			if values != nil {
+				property["enum"] = values
 			}
 		}
 	}
