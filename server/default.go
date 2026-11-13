@@ -40,7 +40,7 @@ func (d *DefaultHandler) populateCapabilities(capabilities *schema.ServerCapabil
 	if d.ServerCapabilities != nil {
 		*capabilities = *d.ServerCapabilities
 	}
-	if d.ToolRegistry.Size() > 0 {
+	if d.ToolRegistry.Size() > 0 && capabilities.Tools == nil {
 		capabilities.Tools = &schema.ServerCapabilitiesTools{}
 	}
 	if d.ResourceRegistry.Size() > 0 {
