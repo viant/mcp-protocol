@@ -434,7 +434,21 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 		}
 	}
 	if enumeration == nil {
-		constraint, err := choice.Parse(field.Field.StructField().Tag, choiceType)
+		collection, err := choice.ParseCollectionEnum(field.Field.Tag, choiceType)
+		if err != nil {
+			return nil, fmt.Errorf("field %s collection choices: %w", fieldPath, err)
+		}
+		var constraint *choice.Constraint
+		if collection != nil {
+			items, ok := property["items"].(map[string]any)
+			if !ok || declared || field.Quoted {
+				return nil, fmt.Errorf("field %s collection choices require an ordinary array schema", fieldPath)
+			}
+			items["enum"] = collection.CollectionItems().WireValues()
+			property = fieldNullability(property, collection.AllowsNullInput())
+		} else {
+			constraint, err = choice.Parse(field.Field.StructField().Tag, choiceType)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("field %s choices: %w", fieldPath, err)
 		}
