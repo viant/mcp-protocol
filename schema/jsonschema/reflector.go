@@ -413,25 +413,7 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 		if field.Quoted || declared {
 			return nil, fmt.Errorf("enumAccept conflicts with explicit scalar wire encoding")
 		}
-		domain := enumeration.InputDomain()
-		if c.reflector.Output {
-			domain = enumeration.OutputDomain()
-		}
-		if domain != nil {
-			property = enumDomainSchema(domain, field.Field.ReflectedType.Kind() == reflect.Pointer)
-		} else {
-			values := enumeration.WireValues(!c.reflector.Output)
-			property = map[string]any{"type": enumeration.WireType(!c.reflector.Output)}
-			if field.Field.ReflectedType.Kind() == reflect.Pointer {
-				property["type"] = []string{enumeration.WireType(!c.reflector.Output), "null"}
-				if values != nil {
-					values = append(values, nil)
-				}
-			}
-			if values != nil {
-				property["enum"] = values
-			}
-		}
+		property = enumSchema(enumeration, c.reflector.Output, field.Field.ReflectedType.Kind() == reflect.Pointer)
 	}
 	if enumeration == nil || enumeration.CollectionItems() != nil {
 		collection := enumeration
@@ -447,8 +429,12 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 			if !ok || declared || field.Quoted {
 				return nil, fmt.Errorf("field %s collection choices require an ordinary array schema", fieldPath)
 			}
-			items["enum"] = collection.CollectionItems().WireValues()
-			property = fieldNullability(property, collection.AllowsNullInput())
+			if element := collection.CollectionElement(); element != nil {
+				property["items"] = enumSchema(element, c.reflector.Output, false)
+			} else {
+				items["enum"] = collection.CollectionItems().WireValues()
+			}
+			property = fieldNullability(property, c.reflector.Output || collection.AllowsNullInput())
 		} else {
 			constraint, err = choice.Parse(field.Field.StructField().Tag, choiceType)
 		}

@@ -29,3 +29,26 @@ func enumDomainSchema(domain *choice.InputDomain, nullable bool) map[string]any 
 	}
 	return map[string]any{"anyOf": branches}
 }
+
+// enumSchema shares the scalar codec's domain for fields and collection items.
+func enumSchema(enumeration *choice.Enum, output, nullable bool) map[string]any {
+	domain := enumeration.InputDomain()
+	if output {
+		domain = enumeration.OutputDomain()
+	}
+	if domain != nil {
+		return enumDomainSchema(domain, nullable)
+	}
+	values := enumeration.WireValues(!output)
+	property := map[string]any{"type": enumeration.WireType(!output)}
+	if nullable {
+		property["type"] = []string{enumeration.WireType(!output), "null"}
+		if values != nil {
+			values = append(values, nil)
+		}
+	}
+	if values != nil {
+		property["enum"] = values
+	}
+	return property
+}
