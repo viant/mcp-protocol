@@ -170,6 +170,9 @@ func Normalize(t reflect.Type, value any, visibility ...Visibility) (any, error)
 		if !ok {
 			return value, nil
 		}
+		if a == nil {
+			return value, nil
+		}
 		out := make([]any, len(a))
 		for i, v := range a {
 			n, e := Normalize(t.Elem(), v, elementVisibility(policy))
