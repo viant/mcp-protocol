@@ -28,6 +28,31 @@ func containsAll(slice []string, want ...string) bool {
 	return true
 }
 
+func TestToolSchemasLoadFieldConstraints(t *testing.T) {
+	type input struct {
+		Values []string `json:"values" minItems:"1" maxItems:"50"`
+		Code   string   `json:"code" mcp:"name=codeLabel" maxLength:"64"`
+		Hidden string   `json:"hidden" mcp:"-" maxLength:"invalid"`
+	}
+	var request ToolInputSchema
+	if err := request.Load(input{}); err != nil {
+		t.Fatal(err)
+	}
+	var response ToolOutputSchema
+	if err := response.Load(input{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, properties := range []ToolInputSchemaProperties{request.Properties, response.Properties} {
+		values, code := prop(properties, "values"), prop(properties, "codeLabel")
+		if values["minItems"] != 1 || values["maxItems"] != 50 || code["maxLength"] != 64 {
+			t.Fatalf("field constraints missing: %v", properties)
+		}
+		if prop(properties, "hidden") != nil || prop(properties, "code") != nil {
+			t.Fatalf("MCP field selection changed: %v", properties)
+		}
+	}
+}
+
 // Test: anonymous embedded struct is flattened, requireds propagate when non-pointer.
 func TestStructToProperties_EmbeddedAnonymous(t *testing.T) {
 	type A struct {

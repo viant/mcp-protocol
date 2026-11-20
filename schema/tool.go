@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/viant/mcp-protocol/schema/fieldname"
+	"github.com/viant/mcp-protocol/schema/internal/fieldconstraints"
 )
 
 // Each compilation owns its recursion state. Another caller processing the same
@@ -352,6 +353,10 @@ func (v *schemaTraversal) properties(t reflect.Type, opts ...StructToPropertiesO
 					delete(fieldSchema, "nullable")
 				}
 			}
+		}
+		if err := fieldconstraints.Apply(fieldSchema, field.Tag); err != nil {
+			// This legacy API reports invalid field metadata as an unsatisfiable schema.
+			fieldSchema["not"] = map[string]any{}
 		}
 		// Set the property in overall schema.
 		properties[fieldName] = fieldSchema

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/viant/mcp-protocol/schema/fieldname"
+	"github.com/viant/mcp-protocol/schema/internal/fieldconstraints"
 	"github.com/viant/tagly/choice"
 	"github.com/viant/tagly/format"
 	xshape "github.com/viant/x/shape"
@@ -477,6 +478,9 @@ func (c *reflectionCompiler) field(field xshape.JSONField, fieldPath string, fie
 	}
 	if enumeration != nil && !c.reflector.Output && !enumeration.AllowsNullInput() {
 		property = fieldNullability(property, false)
+	}
+	if err := fieldconstraints.Apply(property, field.Field.Tag); err != nil {
+		return nil, fmt.Errorf("field %s: %w", fieldPath, err)
 	}
 	if c.reflector.Annotate != nil {
 		description, example := c.reflector.Annotate(fieldPath, field.Field.StructField())
